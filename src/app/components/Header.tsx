@@ -1,0 +1,372 @@
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Pressable,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import { useImageUpload } from "../../context/app/ImageUploadContext";
+
+import { usePathname, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { useDarkMode } from "../../context/app/DarkModeContext";
+import { useAuth } from "../../context/AuthContext";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+/* =========================
+   MENU DATA
+========================= */
+
+const sections = [
+  {
+    title: "General",
+    items: [
+      { title: "Inicio", route: "/aplication/home-app", icon: "home-outline" },
+      { title: "Noticias", route: "/aplication/news", icon: "newspaper-outline" },
+      { title: "Posts ", route: "/aplication/posts", icon: "document-text-outline" },
+    ],
+  },
+  {
+    title: "Perfil",
+    items: [
+      { title: "Perfil Asociación", route: "/config/all/association", icon: "business-outline" },
+      { title: "Perfil Doctor", route: "/config/all/doctor", icon: "medkit-outline" },
+      { title: "Perfil Abogado", route: "/config/all/lawyer", icon: "briefcase-outline" },
+      { title: "Perfil Tienda", route: "/config/all/store", icon: "storefront-outline" },
+      { title: "Perfil Usuario", route: "/config/all/user", icon: "person-outline" },
+    ],
+  },
+  {
+    title: "Configuración",
+    items: [
+      { title: "Configuración", route: "/config/aside/configuration", icon: "settings-outline" },
+      { title: "Nosotros", route: "/config/aside/about_us", icon: "information-circle-outline" },
+      { title: "Ayuda", route: "/config/aside/help", icon: "help-circle-outline" },
+      { title: "Favoritos", route: "/config/aside/favorites", icon: "heart-outline" },
+      { title: "Historial", route: "/config/aside/history", icon: "time-outline" },
+      { title: "Soporte", route: "/config/aside/support", icon: "lock-closed-outline" },
+      { title: "Dark Mode", route: "/config/aside/dark_mode", icon: "moon-outline" },
+      
+    ],
+  },
+];
+
+export default function Header() {
+  const { darkMode } = useDarkMode();
+  const { user } = useAuth();
+const { pickImage, uploadImageByRole, loading } = useImageUpload();
+  const { top } = useSafeAreaInsets();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [expanded, setExpanded] = useState({});
+  const [search, setSearch] = useState("");
+
+  const [profileImage, setProfileImage] = useState(
+    user?.avatar || user?.profile?.image || null
+  );
+
+  const slideAnim = useState(new Animated.Value(-280))[0];
+
+  /* =========================
+     ROLE
+  ========================= */
+
+  const role = user?.profileType;
+
+  const roleLabel =
+    role === "doctor"
+      ? "Doctor"
+      : role === "lawyer"
+      ? "Abogado"
+      : role === "association"
+      ? "Asociación"
+      : role === "shop"
+      ? "Tienda"
+      : "Usuario";
+
+  /* =========================
+     FILTER BY ROLE
+  ========================= */
+
+  const getFilteredSections = () => {
+    return sections.map((section) => {
+      if (section.title === "General") return section;
+
+      if (section.title === "Perfil") {
+        return {
+          ...section,
+          items: section.items.filter((item) => {
+            if (item.title === "Perfil Doctor") return role === "doctor";
+            if (item.title === "Perfil Abogado") return role === "lawyer";
+            if (item.title === "Perfil Asociación") return role === "association";
+            if (item.title === "Perfil Tienda") return role === "shop";
+            if (item.title === "Perfil Usuario") return role === "user";
+            return false;
+          }),
+        };
+      }
+
+      return section;
+    });
+  };
+
+  /* =========================
+     IMAGE PICKER
+  ========================= */
+
+const changeImage = async () => {
+  const image = await pickImage();
+  if (!image) return;
+
+  if (!user?.profileType || !user?.profile?.id) {
+    Alert.alert("Error", "No se pudo identificar el perfil");
+    return;
+  }
+
+  const res = await uploadImageByRole({
+    role: user.profileType,
+    id: user.profile.id,
+    image,
+  });
+
+  if (res?.image) {
+    setProfileImage(res.image); // update UI instantly
+  }
+};
+
+  /* =========================
+     NAVIGATION
+  ========================= */
+
+  const navigate = (route) => {
+    if (!route) return;
+    router.push(route);
+    setMenuOpen(false);
+  };
+
+  const openMenu = () => {
+    setMenuOpen(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeMenu = () => {
+    Animated.timing(slideAnim, {
+      toValue: -280,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setMenuOpen(false));
+  };
+
+  useEffect(() => {
+    closeMenu();
+  }, [pathname]);
+
+  /* =========================
+     COLORS
+  ========================= */
+
+  const colors = {
+    bg: darkMode ? "#0f172a" : "#ffffff",
+    card: darkMode ? "#1e293b" : "#f9fafb",
+    text: darkMode ? "#e5e7eb" : "#111827",
+    subText: darkMode ? "#9ca3af" : "#6b7280",
+    primary: darkMode ? "#22c55e" : "#065f46",
+    border: darkMode ? "#334155" : "#e5e7eb",
+    activeBg: darkMode ? "#064e3b" : "#ecfdf5",
+  };
+
+  return (
+    <View style={{ paddingTop: top, zIndex: 10 }}>
+      {/* HEADER */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 10,
+          height: 56,
+          backgroundColor: colors.primary,
+        }}
+      >
+        <TouchableOpacity onPress={menuOpen ? closeMenu : openMenu}>
+          <Ionicons name={menuOpen ? "close" : "menu"} size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1, marginHorizontal: 10 }}>
+          <TextInput
+            placeholder="Buscar..."
+            placeholderTextColor="#ccc"
+            value={search}
+            onChangeText={setSearch}
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 20,
+              paddingHorizontal: 10,
+              height: 36,
+            }}
+          />
+        </View>
+
+        <View
+          style={{
+            backgroundColor: "rgba(255,255,255,0.2)",
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 20,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}>
+            {roleLabel}
+          </Text>
+        </View>
+      </View>
+
+      {/* OVERLAY */}
+      {menuOpen && (
+        <Pressable
+          onPress={closeMenu}
+          style={{
+            position: "absolute",
+            width: SCREEN_WIDTH,
+            height: SCREEN_HEIGHT,
+            backgroundColor: "rgba(0,0,0,0.5)",
+          }}
+        />
+      )}
+
+      {/* SIDEBAR */}
+      <Animated.View
+        style={{
+          transform: [{ translateX: slideAnim }],
+          position: "absolute",
+          top: top + 56,
+          left: 0,
+          width: 280,
+          height: SCREEN_HEIGHT,
+          backgroundColor: colors.bg,
+          borderTopRightRadius: 40,
+          borderBottomRightRadius: 40,
+        }}
+      >
+        {/* PROFILE */}
+        <View
+          style={{
+            padding: 20,
+            borderBottomWidth: 1,
+            borderColor: colors.border,
+            alignItems: "center",
+            backgroundColor: colors.card,
+          }}
+        >
+          <Image
+            source={{ uri: profileImage || "https://i.pravatar.cc/150" }}
+            style={{
+              width: 90,
+              height: 90,
+              borderRadius: 45,
+              borderWidth: 3,
+              borderColor: colors.primary,
+            }}
+          />
+
+          <TouchableOpacity onPress={changeImage}>
+            <Text style={{ color: colors.primary, marginTop: 6, fontSize: 12 }}>
+              Cambiar foto
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={{ color: colors.text, marginTop: 10, fontWeight: "700" }}>
+            {user?.name}
+          </Text>
+
+          <Text style={{ color: colors.subText }}>{user?.email}</Text>
+        </View>
+
+        {/* MENU WITH EXPAND (RESTORED) */}
+        <View style={{ padding: 12 }}>
+          {getFilteredSections().map((section) => {
+            const isOpen = expanded[section.title];
+
+            return (
+              <View key={section.title} style={{ marginBottom: 10 }}>
+                {/* SECTION HEADER */}
+                <TouchableOpacity
+                  onPress={() =>
+                    setExpanded((prev) => ({
+                      ...prev,
+                      [section.title]: !prev[section.title],
+                    }))
+                  }
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    paddingVertical: 6,
+                  }}
+                >
+                  <Text style={{ color: colors.subText, fontSize: 12 }}>
+                    {section.title.toUpperCase()}
+                  </Text>
+
+                  <Ionicons
+                    name={isOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={colors.subText}
+                  />
+                </TouchableOpacity>
+
+                {/* ITEMS */}
+                {isOpen &&
+                  section.items.map((item) => {
+                    const active = pathname === item.route;
+
+                    return (
+                      <TouchableOpacity
+                        key={item.title}
+                        onPress={() => navigate(item.route)}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          padding: 10,
+                          borderRadius: 10,
+                          backgroundColor: active ? colors.activeBg : "transparent",
+                          marginTop: 4,
+                        }}
+                      >
+                        <Ionicons
+                          name={item.icon}
+                          size={20}
+                          color={active ? colors.primary : colors.subText}
+                          style={{ marginRight: 10 }}
+                        />
+
+                        <Text
+                          style={{
+                            color: active ? colors.primary : colors.text,
+                          }}
+                        >
+                          {item.title}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
