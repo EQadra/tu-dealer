@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-import MaterialCommunityIcons from "@expo/vector-icons";
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Slider from "@react-native-community/slider";
 import * as Brightness from "expo-brightness";
 import { SafeAreaView } from "react-native-safe-area-context";

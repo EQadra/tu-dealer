@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import MaterialCommunityIcons from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* =========================

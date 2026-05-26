@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import MaterialCommunityIcons from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* =========================
@@ -91,10 +91,9 @@ export default function NotificacionesScreen() {
       {/* FOOTER ICON */}
       <View style={styles.footerIcon}>
         <Image
-          source={{ uri: 'https://tudealer.app/imagenes_app/logo.png' }}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+                 source={require("../../../../assets/logo.png")}
+                 style={{ width: 140, height: 42, resizeMode: "contain" }}
+               />
       </View>
     </SafeAreaView>
   );
