@@ -36,12 +36,12 @@ const sections = [
       },
       {
         title: "Noticias",
-        route: "/aplication/news",
+        route: "/config/all/new",
         icon: "newspaper-outline",
       },
       {
         title: "Posts",
-        route: "/aplication/posts",
+        route: "/config/all/post",
         icon: "document-text-outline",
       },
     ],

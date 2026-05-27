@@ -1,17 +1,22 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
+  ActivityIndicator,
   FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  Modal,
-  SafeAreaView,
-  ActivityIndicator,
-  ScrollView,
+  View,
 } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons } from "@expo/vector-icons";
 
@@ -19,8 +24,11 @@ import { useProducts } from "../../context/ProductContext";
 import { useDarkMode } from "../../context/app/DarkModeContext";
 
 const ExploreStoreScreen = () => {
-  const { products, loading, fetchProducts } =
-    useProducts();
+  const {
+    products,
+    loading,
+    fetchProducts,
+  } = useProducts();
 
   /* ================================
      DARK MODE
@@ -37,6 +45,9 @@ const ExploreStoreScreen = () => {
   ================================= */
 
   const [searchText, setSearchText] =
+    useState("");
+
+  const [selectedSearch, setSelectedSearch] =
     useState("");
 
   const [modalVisible, setModalVisible] =
@@ -63,13 +74,25 @@ const ExploreStoreScreen = () => {
   ================================= */
 
   const filteredProducts = useMemo(() => {
-    if (!searchText) return products;
+    if (!searchText.trim())
+      return products;
 
-    return products.filter((item) =>
-      item.name
-        ?.toLowerCase()
-        .includes(searchText.toLowerCase())
-    );
+    return products.filter((item) => {
+      const text =
+        searchText.toLowerCase();
+
+      return (
+        item.name
+          ?.toLowerCase()
+          .includes(text) ||
+        item.description
+          ?.toLowerCase()
+          .includes(text) ||
+        item.productable?.name
+          ?.toLowerCase()
+          .includes(text)
+      );
+    });
   }, [searchText, products]);
 
   /* ================================
@@ -150,18 +173,12 @@ const ExploreStoreScreen = () => {
     </TouchableOpacity>
   );
 
-  return (
-    <SafeAreaView
-      style={[
-        styles.container,
-        {
-          backgroundColor:
-            colors.background,
-        },
-      ]}
-    >
-      {/* TITLE */}
+  /* ================================
+     HEADER
+  ================================= */
 
+  const renderHeader = () => (
+    <>
       <Text
         style={[
           styles.title,
@@ -170,8 +187,6 @@ const ExploreStoreScreen = () => {
       >
         Explorar Productos
       </Text>
-
-      {/* SEARCH */}
 
       <TouchableOpacity
         style={[
@@ -196,22 +211,55 @@ const ExploreStoreScreen = () => {
           style={[
             styles.searchPlaceholder,
             {
-              color:
-                colors.placeholder,
+              color: selectedSearch
+                ? colors.text
+                : colors.placeholder,
             },
           ]}
+          numberOfLines={1}
         >
-          Buscar productos...
+          {selectedSearch ||
+            "Buscar productos..."}
         </Text>
-      </TouchableOpacity>
 
+        {selectedSearch ? (
+          <TouchableOpacity
+            onPress={() => {
+              setSelectedSearch("");
+              setSearchText("");
+            }}
+          >
+            <Ionicons
+              name="close-circle"
+              size={20}
+              color={colors.icon}
+            />
+          </TouchableOpacity>
+        ) : null}
+      </TouchableOpacity>
+    </>
+  );
+
+  return (
+    <SafeAreaView
+      edges={["top"]}
+      style={[
+        styles.container,
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+    >
       {/* PRODUCTS */}
 
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color={colors.primary}
-        />
+        <View style={styles.loader}>
+          <ActivityIndicator
+            size="large"
+            color={colors.primary}
+          />
+        </View>
       ) : (
         <FlatList
           data={products}
@@ -220,6 +268,13 @@ const ExploreStoreScreen = () => {
             item.id.toString()
           }
           numColumns={2}
+          ListHeaderComponent={
+            renderHeader
+          }
+          removeClippedSubviews
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={5}
           columnWrapperStyle={{
             justifyContent:
               "space-between",
@@ -240,8 +295,11 @@ const ExploreStoreScreen = () => {
       <Modal
         visible={modalVisible}
         animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
       >
         <SafeAreaView
+          edges={["top"]}
           style={[
             styles.searchModalContainer,
             {
@@ -290,6 +348,21 @@ const ExploreStoreScreen = () => {
                 }
                 autoFocus
               />
+
+              {searchText.length >
+                0 && (
+                <TouchableOpacity
+                  onPress={() =>
+                    setSearchText("")
+                  }
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={20}
+                    color={colors.icon}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
             <TouchableOpacity
@@ -320,6 +393,10 @@ const ExploreStoreScreen = () => {
               item.id.toString()
             }
             numColumns={2}
+            removeClippedSubviews
+            initialNumToRender={6}
+            maxToRenderPerBatch={8}
+            windowSize={5}
             showsVerticalScrollIndicator={
               false
             }
@@ -355,9 +432,17 @@ const ExploreStoreScreen = () => {
                   },
                 ]}
                 activeOpacity={0.85}
-                onPress={() =>
-                  openDetail(item)
-                }
+                onPress={() => {
+                  setSelectedSearch(
+                    item.name
+                  );
+
+                  setModalVisible(
+                    false
+                  );
+
+                  openDetail(item);
+                }}
               >
                 <Image
                   source={{
@@ -382,7 +467,8 @@ const ExploreStoreScreen = () => {
                   ]}
                 >
                   {item.productable
-                    ?.name || "Producto"}
+                    ?.name ||
+                    "Producto"}
                 </Text>
 
                 <Text
@@ -466,161 +552,176 @@ const ExploreStoreScreen = () => {
               />
             </TouchableOpacity>
 
-            <ScrollView
+            <FlatList
+              data={
+                selectedProduct
+                  ? [selectedProduct]
+                  : []
+              }
+              keyExtractor={(
+                item,
+                index
+              ) => index.toString()}
               showsVerticalScrollIndicator={
                 false
               }
-            >
-              {/* IMAGE */}
+              contentContainerStyle={{
+                paddingBottom: 40,
+              }}
+              renderItem={() => (
+                <>
+                  {/* IMAGE */}
 
-              <Image
-                source={{
-                  uri:
-                    selectedProduct?.image ||
-                    "https://picsum.photos/400",
-                }}
-                style={
-                  styles.detailImage
-                }
-              />
+                  <Image
+                    source={{
+                      uri:
+                        selectedProduct?.image ||
+                        "https://picsum.photos/400",
+                    }}
+                    style={
+                      styles.detailImage
+                    }
+                  />
 
-              {/* BADGE */}
+                  {/* BADGE */}
 
-              <View
-                style={[
-                  styles.detailBadge,
-                  {
-                    backgroundColor:
-                      colors.badgeBackground,
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    color:
-                      colors.primary,
-                    fontWeight:
-                      "700",
-                    fontSize: 12,
-                  }}
-                >
-                  {selectedProduct
-                    ?.productable
-                    ?.name ||
-                    "Producto"}
-                </Text>
-              </View>
+                  <View
+                    style={[
+                      styles.detailBadge,
+                      {
+                        backgroundColor:
+                          colors.badgeBackground,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          colors.primary,
+                        fontWeight:
+                          "700",
+                        fontSize: 12,
+                      }}
+                    >
+                      {selectedProduct
+                        ?.productable
+                        ?.name ||
+                        "Producto"}
+                    </Text>
+                  </View>
 
-              {/* NAME */}
+                  {/* NAME */}
 
-              <Text
-                style={[
-                  styles.detailName,
-                  {
-                    color:
-                      colors.text,
-                  },
-                ]}
-              >
-                {
-                  selectedProduct?.name
-                }
-              </Text>
-
-              {/* PRICE */}
-
-              <Text
-                style={[
-                  styles.detailPrice,
-                  {
-                    color:
-                      colors.primary,
-                  },
-                ]}
-              >
-                S/{" "}
-                {
-                  selectedProduct?.price
-                }
-              </Text>
-
-              {/* RATING */}
-
-              <View
-                style={
-                  styles.ratingContainer
-                }
-              >
-                <Ionicons
-                  name="star"
-                  size={18}
-                  color="#f39c12"
-                />
-
-                <Text
-                  style={[
-                    styles.detailRating,
+                  <Text
+                    style={[
+                      styles.detailName,
+                      {
+                        color:
+                          colors.text,
+                      },
+                    ]}
+                  >
                     {
-                      color:
-                        colors.subText,
-                    },
-                  ]}
-                >
-                  5.0
-                </Text>
-              </View>
+                      selectedProduct?.name
+                    }
+                  </Text>
 
-              {/* DESCRIPTION */}
+                  {/* PRICE */}
 
-              <Text
-                style={[
-                  styles.detailDescription,
-                  {
-                    color:
-                      colors.subText,
-                  },
-                ]}
-              >
-                {
-                  selectedProduct?.description
-                }
-              </Text>
+                  <Text
+                    style={[
+                      styles.detailPrice,
+                      {
+                        color:
+                          colors.primary,
+                      },
+                    ]}
+                  >
+                    S/{" "}
+                    {
+                      selectedProduct?.price
+                    }
+                  </Text>
 
-              {/* STOCK */}
+                  {/* RATING */}
 
-              <View
-                style={[
-                  styles.stockBadge,
-                  {
-                    backgroundColor:
-                      colors.badgeBackground,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="cube-outline"
-                  size={16}
-                  color={
-                    colors.primary
-                  }
-                />
+                  <View
+                    style={
+                      styles.ratingContainer
+                    }
+                  >
+                    <Ionicons
+                      name="star"
+                      size={18}
+                      color="#f39c12"
+                    />
 
-                <Text
-                  style={{
-                    color:
-                      colors.primary,
-                    marginLeft: 6,
-                    fontWeight:
-                      "700",
-                  }}
-                >
-                  Stock:{" "}
-                  {
-                    selectedProduct?.stock
-                  }
-                </Text>
-              </View>
-            </ScrollView>
+                    <Text
+                      style={[
+                        styles.detailRating,
+                        {
+                          color:
+                            colors.subText,
+                        },
+                      ]}
+                    >
+                      5.0
+                    </Text>
+                  </View>
+
+                  {/* DESCRIPTION */}
+
+                  <Text
+                    style={[
+                      styles.detailDescription,
+                      {
+                        color:
+                          colors.subText,
+                      },
+                    ]}
+                  >
+                    {
+                      selectedProduct?.description
+                    }
+                  </Text>
+
+                  {/* STOCK */}
+
+                  <View
+                    style={[
+                      styles.stockBadge,
+                      {
+                        backgroundColor:
+                          colors.badgeBackground,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="cube-outline"
+                      size={16}
+                      color={
+                        colors.primary
+                      }
+                    />
+
+                    <Text
+                      style={{
+                        color:
+                          colors.primary,
+                        marginLeft: 6,
+                        fontWeight:
+                          "700",
+                      }}
+                    >
+                      Stock:{" "}
+                      {
+                        selectedProduct?.stock
+                      }
+                    </Text>
+                  </View>
+                </>
+              )}
+            />
           </View>
         </View>
       </Modal>
@@ -667,13 +768,20 @@ const darkColors = {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+  },
+
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   title: {
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 16,
+    marginTop: 10,
   },
 
   searchContainer: {
@@ -686,6 +794,7 @@ const styles = StyleSheet.create({
   },
 
   searchPlaceholder: {
+    flex: 1,
     marginLeft: 10,
     fontSize: 14,
   },
@@ -737,17 +846,19 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: "center",
     marginTop: 40,
+    fontSize: 14,
   },
 
   searchModalContainer: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
 
   searchModalHeader: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    marginTop: 10,
   },
 
   searchInputContainer: {
