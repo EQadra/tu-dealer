@@ -44,6 +44,11 @@ const sections = [
         route: "/config/all/post",
         icon: "document-text-outline",
       },
+       {
+        title: "Servicios",
+        route: "/config/all/service",
+        icon: "document-text-outline",
+      },
     ],
   },
 
@@ -160,37 +165,55 @@ export default function Header() {
      FILTER MENU
   ========================= */
 
-  const getFilteredSections = () => {
-    return sections.map((section) => {
-      if (section.title === "General") return section;
+const getFilteredSections = () => {
+  return sections.map((section) => {
+    /* =========================
+       GENERAL
+    ========================= */
+    if (section.title === "General") {
+      return {
+        ...section,
+        items: section.items.filter((item) => {
+          // Solo doctor y lawyer pueden ver Servicios
+          if (item.title === "Servicios") {
+            return role === "doctor" || role === "lawyer";
+          }
 
-      if (section.title === "Perfil") {
-        return {
-          ...section,
-          items: section.items.filter((item) => {
-            if (item.title === "Perfil Doctor")
-              return role === "doctor";
+          return true;
+        }),
+      };
+    }
 
-            if (item.title === "Perfil Abogado")
-              return role === "lawyer";
+    /* =========================
+       PERFIL
+    ========================= */
+    if (section.title === "Perfil") {
+      return {
+        ...section,
+        items: section.items.filter((item) => {
+          if (item.title === "Perfil Doctor")
+            return role === "doctor";
 
-            if (item.title === "Perfil Asociación")
-              return role === "association";
+          if (item.title === "Perfil Abogado")
+            return role === "lawyer";
 
-            if (item.title === "Perfil Tienda")
-              return role === "shop";
+          if (item.title === "Perfil Asociación")
+            return role === "association";
 
-            if (item.title === "Perfil Usuario")
-              return role === "user";
+          if (item.title === "Perfil Tienda")
+            return role === "shop";
 
-            return false;
-          }),
-        };
-      }
+          if (item.title === "Perfil Usuario")
+            return role === "user";
 
-      return section;
-    });
-  };
+          return false;
+        }),
+      };
+    }
+
+    return section;
+  });
+};
 
   /* =========================
      IMAGE

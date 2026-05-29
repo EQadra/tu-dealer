@@ -13,6 +13,8 @@ import { DoctorProvider } from "../context/DoctorContext";
 import { LawyerProvider } from "../context/LawyerContext";
 import { PostProvider } from "../context/PostContext";
 import { ProductProvider } from "../context/ProductContext";
+import { ServiceProvider } from "../context/ServiceContext";
+
 import { ShopProvider } from "../context/ShopContext";
 
 import { CommentProvider } from "../context/CommentContext";
@@ -116,11 +118,11 @@ export default function RootLayout(): JSX.Element {
         <DarkModeProvider>
           <AssociationProvider>
             <NewsProvider>
-                    <ImageUploadProvider>
-
+            <ImageUploadProvider>
               <PostProvider>  
               <LawyerProvider>
                 <ShopProvider>
+                <ServiceProvider>
                   <ProductProvider>
                     <DoctorProvider>
                       <CommentProvider>
@@ -128,6 +130,7 @@ export default function RootLayout(): JSX.Element {
                       </CommentProvider>
                     </DoctorProvider>
                   </ProductProvider>
+                  </ServiceProvider>
                 </ShopProvider>
               </LawyerProvider>
               </PostProvider>

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* =========================
@@ -51,6 +52,9 @@ const NOTIFICACIONES = [
 ========================= */
 
 export default function NotificacionesScreen() {
+
+      const router = useRouter();
+  
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -66,13 +70,9 @@ export default function NotificacionesScreen() {
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity>
-          <MaterialCommunityIcons
-            name="chevron-left"
-            size={28}
-            color="#111"
-          />
-        </TouchableOpacity>
+         <TouchableOpacity onPress={() => router.back()}>
+                      <MaterialCommunityIcons name="chevron-left" size={28} color="#111" />
+                    </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Notificaciones</Text>
 
