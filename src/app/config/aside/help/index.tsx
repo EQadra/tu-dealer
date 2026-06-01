@@ -1,15 +1,16 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import Icon from "@expo/vector-icons/Ionicons";
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
   Image,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import Icon from 'react-native-vector-icons/Ionicons';
 
 /* =========================
    CARD FAQ
@@ -48,6 +49,7 @@ const Card = ({ title, content }: { title: string; content: string }) => {
 
 export default function AyudaScreen() {
   const [activeTab, setActiveTab] = useState<'faq' | 'help'>('faq');
+  const router = useRouter();
 
   const openLanding = () => {
     // 👉 AQUÍ PONES TU URL
@@ -57,7 +59,17 @@ export default function AyudaScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
-      <Text style={styles.title}>Centro de Ayuda</Text>
+       <View style={styles.header}>
+             <TouchableOpacity onPress={() => router.back()}>
+               <MaterialCommunityIcons name="chevron-left" size={28} color="#111" />
+             </TouchableOpacity>
+     
+             <Text style={styles.headerTitle}>Favoritos</Text>
+     
+             <TouchableOpacity>
+               <MaterialCommunityIcons name="dots-horizontal" size={24} color="#111" />
+             </TouchableOpacity>
+           </View>
 
       {/* TABS */}
       <View style={styles.tabs}>
@@ -283,5 +295,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
   },
-  
+      header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111',
+  },
 });

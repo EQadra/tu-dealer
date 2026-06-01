@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from "react";
 import {
   Image,
@@ -43,28 +44,17 @@ export default function AboutUs() {
       }}
     >
       {/* HEADER */}
-      <View style={{ alignItems: "center", marginBottom: 24 }}>
-        <Image
-          source={{
-            uri: "https://tudealer.app/imagenes_app/logo.png",
-          }}
-          style={{
-            width: 90,
-            height: 90,
-            marginBottom: 12,
-          }}
-        />
-
-        <Text
-          style={{
-            fontSize: 24,
-            fontWeight: "bold",
-            color: colors.primary,
-          }}
-        >
-          Sobre Nosotros
-        </Text>
-      </View>
+       <View style={styles.header}>
+             <TouchableOpacity onPress={() => router.back()}>
+               <MaterialCommunityIcons name="chevron-left" size={28} color="#111" />
+             </TouchableOpacity>
+     
+             <Text style={styles.headerTitle}>Favoritos</Text>
+     
+             <TouchableOpacity>
+               <MaterialCommunityIcons name="dots-horizontal" size={24} color="#111" />
+             </TouchableOpacity>
+           </View>
 
       {/* DESCRIPCIÓN */}
       <Text
@@ -341,5 +331,19 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 10,
+  },
+
+    header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111',
   },
 });

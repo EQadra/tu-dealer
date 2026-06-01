@@ -1,130 +1,257 @@
 // src/context/ServiceContext.tsx
+
 import React, {
   createContext,
+  ReactNode,
   useContext,
   useState,
-  ReactNode,
-} from 'react';
-import api from '../utils/axios';
-import { Service } from '../types/service';
-import { CreateServicePayload } from '../types/createService';
+} from "react";
+
+import api from "../utils/axios";
+
+export interface Service {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  duration?: number | string;
+
+  serviceable_type?: string;
+  serviceable_id?: number;
+
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateServicePayload {
+  name: string;
+  description?: string;
+  price: number;
+  duration?: number | string;
+
+  serviceable_type: string;
+  serviceable_id: number;
+}
 
 interface ServiceContextProps {
   services: Service[];
-  service: Service | null;
+
   loading: boolean;
+
   error: string | null;
 
   fetchServices: () => Promise<void>;
-  fetchServiceById: (id: number) => Promise<void>;
-  createService: (data: CreateServicePayload) => Promise<Service>;
+
+  createService: (
+    data: CreateServicePayload
+  ) => Promise<Service>;
+
   updateService: (
     id: number,
     data: Partial<CreateServicePayload>
   ) => Promise<Service>;
-  deleteService: (id: number) => Promise<void>;
+
+  deleteService: (
+    id: number
+  ) => Promise<void>;
 }
 
-const ServiceContext = createContext<ServiceContextProps>(
-  {} as ServiceContextProps
-);
+const ServiceContext =
+  createContext<ServiceContextProps>(
+    {} as ServiceContextProps
+  );
 
-export const ServiceProvider = ({ children }: { children: ReactNode }) => {
-  const [services, setServices] = useState<Service[]>([]);
-  const [service, setService] = useState<Service | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const ServiceProvider = ({
+  children,
+}: {
+  children: ReactNode;
+}) => {
+  const [services, setServices] = useState<
+    Service[]
+  >([]);
 
-  // GET /api/services
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] = useState<
+    string | null
+  >(null);
+
+  /* =========================================
+     GET ALL SERVICES
+  ========================================= */
+
   const fetchServices = async () => {
-    setLoading(true);
-    setError(null);
-
     try {
-      const res = await api.get('/api/services');
-      setServices(res.data);
+      setLoading(true);
+      setError(null);
+
+      const res = await api.get("/services");
+
+      // 🔥 soporta array directo o paginado
+      const data = Array.isArray(res.data)
+        ? res.data
+        : res.data.data || [];
+
+      setServices(data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cargar servicios');
+      console.log(
+        "FETCH SERVICES ERROR:",
+        err?.response?.data || err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          "Error loading services"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // GET /api/services/{id}
-  const fetchServiceById = async (id: number) => {
-    setLoading(true);
-    setError(null);
+  /* =========================================
+     CREATE SERVICE
+  ========================================= */
 
-    try {
-      const res = await api.get(`/api/services/${id}`);
-      setService(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cargar servicio');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // POST /api/services
   const createService = async (
     data: CreateServicePayload
   ): Promise<Service> => {
-    setLoading(true);
-    setError(null);
-
     try {
-      const res = await api.post('/api/services', data);
-      const newService = res.data.data;
+      setLoading(true);
+      setError(null);
 
-      setServices((prev) => [newService, ...prev]);
+      const payload = {
+        ...data,
+
+        // 🔥 asegurar tipos
+        price: Number(data.price),
+
+        duration: data.duration
+          ? Number(data.duration)
+          : null,
+      };
+
+      const res = await api.post(
+        "/services",
+        payload
+      );
+
+      const newService: Service =
+        res.data.data;
+
+      setServices((prev) => [
+        newService,
+        ...prev,
+      ]);
+
       return newService;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al crear servicio');
+      console.log(
+        "CREATE SERVICE ERROR:",
+        err?.response?.data || err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          "Error creating service"
+      );
+
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // PUT /api/services/{id}
+  /* =========================================
+     UPDATE SERVICE
+  ========================================= */
+
   const updateService = async (
     id: number,
     data: Partial<CreateServicePayload>
   ): Promise<Service> => {
-    setLoading(true);
-    setError(null);
-
     try {
-      const res = await api.put(`/api/services/${id}`, data);
-      const updatedService = res.data.data;
+      setLoading(true);
+      setError(null);
 
-      setServices((prev) =>
-        prev.map((s) => (s.id === id ? updatedService : s))
+      const payload = {
+        ...data,
+
+        price: data.price
+          ? Number(data.price)
+          : undefined,
+
+        duration: data.duration
+          ? Number(data.duration)
+          : undefined,
+      };
+
+      const res = await api.put(
+        `/services/${id}`,
+        payload
       );
 
-      if (service?.id === id) {
-        setService(updatedService);
-      }
+      const updated: Service =
+        res.data.data;
 
-      return updatedService;
+      setServices((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? updated
+            : item
+        )
+      );
+
+      return updated;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al actualizar servicio');
+      console.log(
+        "UPDATE SERVICE ERROR:",
+        err?.response?.data || err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          "Error updating service"
+      );
+
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // DELETE /api/services/{id}
-  const deleteService = async (id: number) => {
-    setLoading(true);
-    setError(null);
+  /* =========================================
+     DELETE SERVICE
+  ========================================= */
 
+  const deleteService = async (
+    id: number
+  ): Promise<void> => {
     try {
-      await api.delete(`/api/services/${id}`);
-      setServices((prev) => prev.filter((s) => s.id !== id));
+      setLoading(true);
+      setError(null);
+
+      await api.delete(
+        `/services/${id}`
+      );
+
+      setServices((prev) =>
+        prev.filter(
+          (item) => item.id !== id
+        )
+      );
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al eliminar servicio');
+      console.log(
+        "DELETE SERVICE ERROR:",
+        err?.response?.data || err
+      );
+
+      setError(
+        err?.response?.data?.message ||
+          "Error deleting service"
+      );
+
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -134,13 +261,17 @@ export const ServiceProvider = ({ children }: { children: ReactNode }) => {
     <ServiceContext.Provider
       value={{
         services,
-        service,
+
         loading,
+
         error,
+
         fetchServices,
-        fetchServiceById,
+
         createService,
+
         updateService,
+
         deleteService,
       }}
     >
@@ -149,4 +280,15 @@ export const ServiceProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useServices = () => useContext(ServiceContext);
+export const useServices = () => {
+  const context =
+    useContext(ServiceContext);
+
+  if (!context) {
+    throw new Error(
+      "useServices must be used inside ServiceProvider"
+    );
+  }
+
+  return context;
+};
