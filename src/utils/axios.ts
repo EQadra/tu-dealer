@@ -1,9 +1,7 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// export const BASE_URL = 'http://10.193.92.21:8000/api';
-
- export const BASE_URL = 'https://apiapk.tudealer.app/api';
+ export const BASE_URL = 'http://apiapk.tudealer.app/api';
 
 
 let memoryToken: string | null = null;

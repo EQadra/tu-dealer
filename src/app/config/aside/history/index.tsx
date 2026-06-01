@@ -1,16 +1,16 @@
-// HistorialScreen.tsx
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from 'react-native';
 const historialData = [
   {
@@ -44,13 +44,15 @@ const historialData = [
 ];
 
 export default function HistorialScreen() {
+    const router = useRouter();
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => {/* navegación atrás */}}>
+             <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={28} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mi historial</Text>

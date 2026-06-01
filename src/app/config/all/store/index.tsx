@@ -1,32 +1,69 @@
 import React, { useEffect, useState } from "react";
+
 import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
-  StyleSheet,
+  Image,
   Modal,
-  useColorScheme,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+
 import { useAuth } from "../../../../context/AuthContext";
 import { useProducts } from "../../../../context/ProductContext";
+import { useDarkMode } from "../../../../context/app/DarkModeContext";
+
 import api from "../../../../utils/axios";
 
 export default function ShopScreen() {
-  const scheme = useColorScheme();
-  const isDark = scheme === "dark";
-  const styles = getStyles(isDark);
+  /* =========================================================
+     DARK MODE
+  ========================================================= */
 
-  const { user, me, loading: authLoading } = useAuth();
-  const { createProduct, updateProduct, deleteProduct } = useProducts();
+  const { darkMode } = useDarkMode();
 
-  const [shop, setShop] = useState<any>(user?.profile);
-  const [tab, setTab] = useState<"products" | "feedbacks" | "news">("products");
+  const colors = {
+    background: darkMode ? "#020617" : "#F9FAFB",
+    card: darkMode ? "#0F172A" : "#FFFFFF",
+    text: darkMode ? "#F8FAFC" : "#111827",
+    secondaryText: darkMode ? "#94A3B8" : "#666666",
+    border: darkMode ? "#1E293B" : "#E5E7EB",
+    input: darkMode ? "#1E293B" : "#FFFFFF",
+    modal: darkMode ? "#0F172A" : "#FFFFFF",
+    button: "#16A34A",
+    placeholder: darkMode ? "#94A3B8" : "#999999",
+  };
+
+  /* =========================================================
+     CONTEXTS
+  ========================================================= */
+
+  const { user, me, loading: authLoading } =
+    useAuth();
+
+  const {
+    createProduct,
+    updateProduct,
+    deleteProduct,
+  } = useProducts();
+
+  /* =========================================================
+     STATES
+  ========================================================= */
+
+  const [shop, setShop] = useState<any>(null);
+
+  const [tab, setTab] = useState<
+    "perfil" | "productos" | "posts" | "feedbacks" | "news"
+  >("perfil");
+
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -38,28 +75,36 @@ export default function ShopScreen() {
     schedule: "",
   });
 
-  const [modalVisible, setModalVisible] = useState(false);
+  /* =========================================================
+     CREATE PRODUCT
+  ========================================================= */
 
-  // CREATE PRODUCT
-  const [productForm, setProductForm] = useState({
+  const [showModal, setShowModal] = useState(false);
+
+  const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
     price: "",
     stock: "",
+    image: "",
   });
 
-  const [image, setImage] = useState<string | null>(null);
+  /* =========================================================
+     EDIT PRODUCT
+  ========================================================= */
 
-  // EDIT PRODUCT
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editModal, setEditModal] = useState(false);
 
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    price: "",
-    stock: "",
-  });
+  const [editProductState, setEditProductState] =
+    useState<any>(null);
+
+  /* =========================================================
+     EFFECTS
+  ========================================================= */
+
+  useEffect(() => {
+    setShop(user?.profile);
+  }, [user]);
 
   useEffect(() => {
     if (shop) {
@@ -74,130 +119,173 @@ export default function ShopScreen() {
     }
   }, [shop]);
 
-  /* ================= IMAGE PICKER ================= */
+  /* =========================================================
+     IMAGE PICKER
+  ========================================================= */
+
   const pickImage = async () => {
     const permission =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted) {
-      Alert.alert("Permiso requerido", "Permite acceso a galería");
+      Alert.alert(
+        "Permiso requerido",
+        "Permite acceso a galería"
+      );
+
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.7,
-    });
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes:
+          ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+      });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setNewProduct({
+        ...newProduct,
+        image: result.assets[0].uri,
+      });
     }
   };
 
-  /* ================= UPDATE SHOP ================= */
+  /* =========================================================
+     UPDATE SHOP
+  ========================================================= */
+
   const handleSubmit = async () => {
     if (!shop) return;
 
     try {
       setLoading(true);
+
       await api.put(`/shops/${shop.id}`, form);
+
       await me();
-      Alert.alert("Éxito", "Tienda actualizada");
+
+      Alert.alert(
+        "✅ Éxito",
+        "Tienda actualizada"
+      );
     } catch {
-      Alert.alert("Error", "No se pudo actualizar");
+      Alert.alert(
+        "❌ Error",
+        "No se pudo actualizar"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= CREATE PRODUCT ================= */
+  /* =========================================================
+     CREATE PRODUCT
+  ========================================================= */
+
   const handleCreateProduct = async () => {
     if (!shop) return;
-
-    if (
-      !productForm.name ||
-      !productForm.description ||
-      !productForm.price ||
-      !productForm.stock
-    ) {
-      return Alert.alert("Error", "Completa todos los campos");
-    }
-
-    if (!image) {
-      return Alert.alert("Error", "Selecciona una imagen");
-    }
 
     try {
       setLoading(true);
 
       const formData = new FormData();
 
-      formData.append("name", productForm.name);
-      formData.append("description", productForm.description);
-      formData.append("price", String(productForm.price));
-      formData.append("stock", String(productForm.stock));
-      formData.append("store_id", String(shop.id));
+      formData.append("name", newProduct.name);
 
-      formData.append("image", {
-        uri: image,
-        name: "photo.jpg",
-        type: "image/jpeg",
-      } as any);
+      formData.append(
+        "description",
+        newProduct.description
+      );
 
-      const newProduct = await createProduct(formData);
+      formData.append(
+        "price",
+        String(newProduct.price)
+      );
+
+      formData.append(
+        "stock",
+        String(newProduct.stock)
+      );
+
+      formData.append(
+        "store_id",
+        String(shop.id)
+      );
+
+      if (newProduct.image) {
+        formData.append("image", {
+          uri: newProduct.image,
+          name: "photo.jpg",
+          type: "image/jpeg",
+        } as any);
+      }
+
+      const created = await createProduct(
+        formData
+      );
 
       setShop((prev: any) => ({
         ...prev,
-        products: [newProduct, ...(prev.products || [])],
+        products: [
+          created,
+          ...(prev.products || []),
+        ],
       }));
 
-      setModalVisible(false);
-      setImage(null);
+      setShowModal(false);
 
-      setProductForm({
+      setNewProduct({
         name: "",
         description: "",
         price: "",
         stock: "",
+        image: "",
       });
-
-      await me();
 
       Alert.alert("✅ Producto creado");
     } catch {
-      Alert.alert("❌ Error al crear producto");
+      Alert.alert(
+        "❌ Error al crear producto"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= OPEN EDIT ================= */
-  const openEditModal = (product: any) => {
-    setEditingProduct(product);
+  /* =========================================================
+     DELETE PRODUCT
+  ========================================================= */
 
-    setEditForm({
-      name: product.name,
-      description: product.description,
-      price: String(product.price),
-      stock: String(product.stock),
-    });
+  const handleDeleteProduct = async (
+    productId: number
+  ) => {
+    try {
+      await deleteProduct(productId);
 
-    setEditModalVisible(true);
+      setShop((prev: any) => ({
+        ...prev,
+        products: prev.products.filter(
+          (p: any) => p.id !== productId
+        ),
+      }));
+
+      Alert.alert("✅ Producto eliminado");
+    } catch {
+      Alert.alert("❌ Error eliminando");
+    }
   };
 
-  /* ================= UPDATE PRODUCT ================= */
+  /* =========================================================
+     UPDATE PRODUCT
+  ========================================================= */
+
   const handleUpdateProduct = async () => {
-    if (!editingProduct) return;
-
     try {
-      setLoading(true);
-
-      const updated = await updateProduct(editingProduct.id, {
-        name: editForm.name,
-        description: editForm.description,
-        price: Number(editForm.price),
-        stock: Number(editForm.stock),
-      });
+      const updated = await updateProduct(
+        editProductState.id,
+        editProductState
+      );
 
       setShop((prev: any) => ({
         ...prev,
@@ -206,442 +294,922 @@ export default function ShopScreen() {
         ),
       }));
 
-      setEditModalVisible(false);
-      setEditingProduct(null);
+      setEditModal(false);
 
-      Alert.alert("✅ Producto actualizado");
+      setEditProductState(null);
+
+      Alert.alert(
+        "✅ Producto actualizado"
+      );
     } catch {
-      Alert.alert("❌ Error al actualizar");
-    } finally {
-      setLoading(false);
+      Alert.alert(
+        "❌ Error actualizando"
+      );
     }
   };
 
-  /* ================= DELETE PRODUCT ================= */
-  const handleDeleteProduct = (id: number) => {
-    Alert.alert("Eliminar", "¿Seguro que quieres eliminar?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteProduct(id);
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
-            setShop((prev: any) => ({
-              ...prev,
-              products: prev.products.filter((p: any) => p.id !== id),
-            }));
-
-            Alert.alert("🗑️ Eliminado");
-          } catch {
-            Alert.alert("Error al eliminar");
-          }
-        },
-      },
-    ]);
-  };
-
-  /* ================= RENDER ================= */
-  const renderProducts = () => (
-    <>
-      {shop.products?.map((p: any) => (
-        <View key={p.id} style={styles.card}>
-          <Image source={{ uri: p.image }} style={styles.image} />
-
-          <Text style={styles.title}>{p.name}</Text>
-          <Text style={styles.price}>${p.price}</Text>
-
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-            <TouchableOpacity
-              onPress={() => openEditModal(p)}
-              style={{ backgroundColor: "#3b82f6", padding: 8, borderRadius: 8 }}
-            >
-              <Text style={{ color: "#fff" }}>Editar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => handleDeleteProduct(p.id)}
-              style={{ backgroundColor: "#ef4444", padding: 8, borderRadius: 8 }}
-            >
-              <Text style={{ color: "#fff" }}>Eliminar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
-    </>
-  );
-
-  const renderFeedbacks = () => (
-    <>
-      {shop.feedbacks?.map((f: any) => (
-        <View key={f.id} style={styles.card}>
-          <Text style={styles.title}>{f.user?.name}</Text>
-          <Text style={styles.text}>{f.comment}</Text>
-          <Text style={styles.rating}>⭐ {f.rating}</Text>
-        </View>
-      ))}
-    </>
-  );
-
-  const renderNews = () => (
-    <>
-      {shop.news?.map((n: any) => (
-        <View key={n.id} style={styles.card}>
-          {n.image && <Image source={{ uri: n.image }} style={styles.image} />}
-          <Text style={styles.title}>{n.title}</Text>
-          <Text style={styles.text}>{n.content}</Text>
-        </View>
-      ))}
-    </>
-  );
-
-  /* ================= UI ================= */
   if (authLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#22c55e" />
+      <View
+        style={[
+          styles.center,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
+        <ActivityIndicator
+          size="large"
+          color="#22c55e"
+        />
       </View>
     );
   }
 
   if (!shop) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.emptyText}>No tienes tienda</Text>
+      <View
+        style={[
+          styles.center,
+          {
+            backgroundColor:
+              colors.background,
+          },
+        ]}
+      >
+        <Text
+          style={{
+            color: colors.text,
+          }}
+        >
+          No tienes tienda
+        </Text>
       </View>
     );
   }
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+      }}
+    >
       <ScrollView style={styles.container}>
-        <Text style={styles.shopName}>{shop.name}</Text>
-        <Text style={styles.city}>{shop.city}</Text>
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-        {/* EDIT SHOP */}
-        <Text style={styles.section}>Editar tienda</Text>
-
-        {Object.keys(form).map((key) => (
-          <TextInput
-            key={key}
-            style={styles.input}
-            value={form[key as keyof typeof form]}
-            onChangeText={(text) =>
-              setForm((p) => ({ ...p, [key]: text }))
-            }
+        <View style={styles.header}>
+          <Image
+            source={{
+              uri:
+                shop.image ||
+                "https://picsum.photos/200",
+            }}
+            style={styles.avatar}
           />
-        ))}
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit}>
-          <Text style={styles.saveBtnText}>
-            {loading ? "Guardando..." : "Guardar"}
+          <Text
+            style={[
+              styles.name,
+              { color: colors.text },
+            ]}
+          >
+            {shop.name}
           </Text>
-        </TouchableOpacity>
 
-        {/* TABS */}
-        <View style={styles.tabs}>
-          <Text onPress={() => setTab("products")} style={styles.tab}>
-            Productos
-          </Text>
-          <Text onPress={() => setTab("feedbacks")} style={styles.tab}>
-            Opiniones
-          </Text>
-          <Text onPress={() => setTab("news")} style={styles.tab}>
-            Noticias
+          <Text
+            style={{
+              color: colors.secondaryText,
+            }}
+          >
+            {shop.city}
           </Text>
         </View>
 
-        {tab === "products" && renderProducts()}
-        {tab === "feedbacks" && renderFeedbacks()}
-        {tab === "news" && renderNews()}
+        {/* =====================================================
+            TABS
+        ===================================================== */}
+
+        <View style={styles.tabs}>
+          {[
+            "perfil",
+            "productos",
+            "posts",
+            "feedbacks",
+            "news",
+          ].map((t) => (
+            <TouchableOpacity
+              key={t}
+              onPress={() =>
+                setTab(t as any)
+              }
+            >
+              <Text
+                style={
+                  tab === t
+                    ? [
+                        styles.activeTab,
+                        {
+                          color:
+                            "#22c55e",
+                        },
+                      ]
+                    : [
+                        styles.tab,
+                        {
+                          color:
+                            colors.secondaryText,
+                        },
+                      ]
+                }
+              >
+                {t.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* =====================================================
+            PERFIL
+        ===================================================== */}
+
+        {tab === "perfil" && (
+          <View>
+            {Object.keys(form).map((field) => (
+              <TextInput
+                key={field}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor:
+                      colors.input,
+                    borderColor:
+                      colors.border,
+                    color:
+                      colors.text,
+                  },
+                ]}
+                placeholder={field}
+                placeholderTextColor={
+                  colors.placeholder
+                }
+                value={
+                  form[
+                    field as keyof typeof form
+                  ]
+                }
+                onChangeText={(t) =>
+                  setForm({
+                    ...form,
+                    [field]: t,
+                  })
+                }
+              />
+            ))}
+
+            <TouchableOpacity
+              style={styles.saveBtn}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.saveText}>
+                {loading
+                  ? "Guardando..."
+                  : "Guardar"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* =====================================================
+            PRODUCTOS
+        ===================================================== */}
+
+        {tab === "productos" && (
+          <View>
+            {shop.products?.length ===
+              0 && (
+              <Text
+                style={{
+                  color:
+                    colors.secondaryText,
+                  textAlign: "center",
+                  marginTop: 20,
+                }}
+              >
+                No hay productos
+              </Text>
+            )}
+
+            {shop.products?.map((p: any) => (
+              <View
+                key={p.id}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor:
+                      colors.card,
+                  },
+                ]}
+              >
+                <Image
+                  source={{
+                    uri: p.image,
+                  }}
+                  style={
+                    styles.productImage
+                  }
+                />
+
+                <Text
+                  style={[
+                    styles.postTitle,
+                    {
+                      color:
+                        colors.text,
+                    },
+                  ]}
+                >
+                  {p.name}
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      colors.secondaryText,
+                    marginTop: 4,
+                  }}
+                >
+                  {p.description}
+                </Text>
+
+                <Text
+                  style={{
+                    color: "#22c55e",
+                    marginTop: 6,
+                    fontWeight: "700",
+                  }}
+                >
+                  S/. {p.price}
+                </Text>
+
+                {/* ACTIONS */}
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditProductState(
+                        p
+                      );
+
+                      setEditModal(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={22}
+                      color="#facc15"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      Alert.alert(
+                        "Eliminar",
+                        "¿Seguro?",
+                        [
+                          {
+                            text:
+                              "Cancelar",
+                            style:
+                              "cancel",
+                          },
+                          {
+                            text:
+                              "Eliminar",
+                            style:
+                              "destructive",
+                            onPress:
+                              () =>
+                                handleDeleteProduct(
+                                  p.id
+                                ),
+                          },
+                        ]
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={22}
+                      color="#ef4444"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* =====================================================
+            POSTS
+        ===================================================== */}
+
+        {tab === "posts" && (
+          <View>
+            {shop.posts?.length === 0 && (
+              <Text
+                style={{
+                  color:
+                    colors.secondaryText,
+                  textAlign: "center",
+                  marginTop: 20,
+                }}
+              >
+                No hay posts
+              </Text>
+            )}
+
+            {shop.posts?.map((post: any) => (
+              <View
+                key={post.id}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor:
+                      colors.card,
+                  },
+                ]}
+              >
+                {post.image && (
+                  <Image
+                    source={{
+                      uri: post.image,
+                    }}
+                    style={
+                      styles.productImage
+                    }
+                  />
+                )}
+
+                <Text
+                  style={[
+                    styles.postTitle,
+                    {
+                      color:
+                        colors.text,
+                    },
+                  ]}
+                >
+                  {post.title}
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      colors.secondaryText,
+                    marginTop: 6,
+                  }}
+                >
+                  {post.content}
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      colors.secondaryText,
+                    marginTop: 10,
+                    fontSize: 12,
+                  }}
+                >
+                  Comentarios:{" "}
+                  {post.comments
+                    ?.length || 0}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* =====================================================
+            FEEDBACKS
+        ===================================================== */}
+
+        {tab === "feedbacks" && (
+          <View>
+            {shop.feedbacks?.map(
+              (f: any) => (
+                <View
+                  key={f.id}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor:
+                        colors.card,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.postTitle,
+                      {
+                        color:
+                          colors.text,
+                      },
+                    ]}
+                  >
+                    {f.user?.name}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color:
+                        colors.secondaryText,
+                      marginTop: 8,
+                    }}
+                  >
+                    {f.comment}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color:
+                        "#facc15",
+                      marginTop: 10,
+                    }}
+                  >
+                    ⭐ {f.rating}
+                  </Text>
+                </View>
+              )
+            )}
+          </View>
+        )}
+
+        {/* =====================================================
+            NEWS
+        ===================================================== */}
+
+        {tab === "news" && (
+          <View>
+            {shop.news?.map((n: any) => (
+              <View
+                key={n.id}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor:
+                      colors.card,
+                  },
+                ]}
+              >
+                {n.image && (
+                  <Image
+                    source={{
+                      uri: n.image,
+                    }}
+                    style={
+                      styles.productImage
+                    }
+                  />
+                )}
+
+                <Text
+                  style={[
+                    styles.postTitle,
+                    {
+                      color:
+                        colors.text,
+                    },
+                  ]}
+                >
+                  {n.title}
+                </Text>
+
+                <Text
+                  style={{
+                    color:
+                      colors.secondaryText,
+                    marginTop: 6,
+                  }}
+                >
+                  {n.content}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
-      {/* FAB */}
-      {tab === "products" && (
+      {/* =====================================================
+          FAB
+      ===================================================== */}
+
+      {tab === "productos" && (
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => setModalVisible(true)}
+          onPress={() =>
+            setShowModal(true)
+          }
         >
-          <Text style={styles.fabText}>＋</Text>
+          <Ionicons
+            name="add"
+            size={28}
+            color="#fff"
+          />
         </TouchableOpacity>
       )}
 
-      {/* CREATE MODAL */}
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.section}>Nuevo Producto</Text>
+      {/* =====================================================
+          CREATE PRODUCT MODAL
+      ===================================================== */}
 
-            <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
-              <Text style={styles.imagePickerText}>
-                {image ? "Cambiar imagen" : "Seleccionar"}
-              </Text>
-            </TouchableOpacity>
+      <Modal
+        visible={showModal}
+        animationType="slide"
+      >
+        <ScrollView
+          style={[
+            styles.modal,
+            {
+              backgroundColor:
+                colors.background,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.modalTitle,
+              { color: colors.text },
+            ]}
+          >
+            Nuevo Producto
+          </Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Nombre"
-              value={productForm.name}
-              onChangeText={(t) =>
-                setProductForm((p) => ({ ...p, name: t }))
-              }
-            />
+          <TextInput
+            placeholder="Nombre"
+            placeholderTextColor={
+              colors.placeholder
+            }
+            value={newProduct.name}
+            onChangeText={(t) =>
+              setNewProduct({
+                ...newProduct,
+                name: t,
+              })
+            }
+            style={[
+              styles.input,
+              {
+                backgroundColor:
+                  colors.input,
+                borderColor:
+                  colors.border,
+                color: colors.text,
+              },
+            ]}
+          />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Precio"
-              value={productForm.price}
-              keyboardType="numeric"
-              onChangeText={(t) =>
-                setProductForm((p) => ({ ...p, price: t }))
-              }
-            />
+          <TextInput
+            placeholder="Descripción"
+            placeholderTextColor={
+              colors.placeholder
+            }
+            value={
+              newProduct.description
+            }
+            onChangeText={(t) =>
+              setNewProduct({
+                ...newProduct,
+                description: t,
+              })
+            }
+            style={[
+              styles.input,
+              {
+                backgroundColor:
+                  colors.input,
+                borderColor:
+                  colors.border,
+                color: colors.text,
+              },
+            ]}
+          />
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleCreateProduct}>
-              <Text style={styles.saveBtnText}>Crear</Text>
-            </TouchableOpacity>
+          <TextInput
+            placeholder="Precio"
+            placeholderTextColor={
+              colors.placeholder
+            }
+            value={newProduct.price}
+            onChangeText={(t) =>
+              setNewProduct({
+                ...newProduct,
+                price: t,
+              })
+            }
+            style={[
+              styles.input,
+              {
+                backgroundColor:
+                  colors.input,
+                borderColor:
+                  colors.border,
+                color: colors.text,
+              },
+            ]}
+          />
 
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.cancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <TextInput
+            placeholder="Stock"
+            placeholderTextColor={
+              colors.placeholder
+            }
+            value={newProduct.stock}
+            onChangeText={(t) =>
+              setNewProduct({
+                ...newProduct,
+                stock: t,
+              })
+            }
+            style={[
+              styles.input,
+              {
+                backgroundColor:
+                  colors.input,
+                borderColor:
+                  colors.border,
+                color: colors.text,
+              },
+            ]}
+          />
+
+          <TouchableOpacity
+            onPress={pickImage}
+            style={styles.saveBtn}
+          >
+            <Text style={styles.saveText}>
+              Seleccionar Imagen
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleCreateProduct}
+            style={styles.saveBtn}
+          >
+            <Text style={styles.saveText}>
+              Guardar
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() =>
+              setShowModal(false)
+            }
+            style={[
+              styles.saveBtn,
+              {
+                backgroundColor:
+                  "#ef4444",
+              },
+            ]}
+          >
+            <Text style={styles.saveText}>
+              Cancelar
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </Modal>
 
-      {/* EDIT MODAL */}
-      <Modal visible={editModalVisible} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.section}>Editar Producto</Text>
+      {/* =====================================================
+          EDIT PRODUCT MODAL
+      ===================================================== */}
 
-            <TextInput
-              style={styles.input}
-              value={editForm.name}
-              onChangeText={(t) =>
-                setEditForm((p) => ({ ...p, name: t }))
-              }
-            />
+      <Modal
+        visible={editModal}
+        animationType="slide"
+      >
+        <ScrollView
+          style={[
+            styles.modal,
+            {
+              backgroundColor:
+                colors.background,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.modalTitle,
+              { color: colors.text },
+            ]}
+          >
+            Editar Producto
+          </Text>
 
-            <TextInput
-              style={styles.input}
-              value={editForm.price}
-              onChangeText={(t) =>
-                setEditForm((p) => ({ ...p, price: t }))
-              }
-            />
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor:
+                  colors.input,
+                borderColor:
+                  colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={
+              editProductState?.name
+            }
+            onChangeText={(t) =>
+              setEditProductState({
+                ...editProductState,
+                name: t,
+              })
+            }
+          />
 
-            <TouchableOpacity style={styles.saveBtn} onPress={handleUpdateProduct}>
-              <Text style={styles.saveBtnText}>Actualizar</Text>
-            </TouchableOpacity>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor:
+                  colors.input,
+                borderColor:
+                  colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={
+              editProductState?.description
+            }
+            onChangeText={(t) =>
+              setEditProductState({
+                ...editProductState,
+                description: t,
+              })
+            }
+          />
 
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => setEditModalVisible(false)}
-            >
-              <Text style={styles.cancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <TouchableOpacity
+            style={styles.saveBtn}
+            onPress={
+              handleUpdateProduct
+            }
+          >
+            <Text style={styles.saveText}>
+              Guardar cambios
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() =>
+              setEditModal(false)
+            }
+            style={[
+              styles.saveBtn,
+              {
+                backgroundColor:
+                  "#ef4444",
+              },
+            ]}
+          >
+            <Text style={styles.saveText}>
+              Cancelar
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </Modal>
     </View>
   );
 }
 
-/* ================= STYLES ================= */
+/* =========================================================
+   STYLES
+========================================================= */
 
-const getStyles = (isDark: boolean) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: isDark ? "#0f172a" : "#F9FAFB",
-      padding: 16,
-    },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
 
-    center: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: isDark ? "#0f172a" : "#F9FAFB",
-    },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
-    emptyText: {
-      color: isDark ? "#fff" : "#111",
-      fontSize: 16,
-    },
+  header: {
+    alignItems: "center",
+    padding: 20,
+  },
 
-    shopName: {
-      color: isDark ? "#22c55e" : "#16A34A",
-      fontSize: 22,
-      fontWeight: "bold",
-    },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
 
-    city: {
-      color: isDark ? "#94a3b8" : "#666",
-      marginBottom: 10,
-    },
+  name: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 10,
+  },
 
-    section: {
-      color: isDark ? "#fff" : "#111827",
-      marginTop: 20,
-      marginBottom: 8,
-      fontWeight: "bold",
-      fontSize: 16,
-    },
+  tabs: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginBottom: 20,
+    flexWrap: "wrap",
+    gap: 12,
+    paddingHorizontal: 10,
+  },
 
-    input: {
-      backgroundColor: isDark ? "#1e293b" : "#fff",
-      color: isDark ? "#fff" : "#111",
-      padding: 12,
-      borderRadius: 10,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: isDark ? "#334155" : "#E5E7EB",
-    },
+  tab: {
+    fontWeight: "500",
+    fontSize: 13,
+  },
 
-    saveBtn: {
-      backgroundColor: isDark ? "#22c55e" : "#16A34A",
-      padding: 14,
-      borderRadius: 10,
-      alignItems: "center",
-      marginTop: 10,
-    },
+  activeTab: {
+    fontWeight: "bold",
+    fontSize: 13,
+  },
 
-    saveBtnText: {
-      color: "#fff",
-      fontWeight: "700",
-    },
+  input: {
+    margin: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+  },
 
-    tabs: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-      marginVertical: 20,
-    },
+  saveBtn: {
+    backgroundColor: "#16A34A",
+    margin: 10,
+    padding: 14,
+    borderRadius: 10,
+  },
 
-    tab: {
-      color: isDark ? "#94a3b8" : "#666",
-      fontSize: 15,
-    },
+  saveText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "600",
+  },
 
-    active: {
-      color: isDark ? "#22c55e" : "#16A34A",
-      fontWeight: "bold",
-    },
+  card: {
+    marginHorizontal: 10,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 12,
+  },
 
-    card: {
-      backgroundColor: isDark ? "#1e293b" : "#fff",
-      padding: 14,
-      borderRadius: 14,
-      marginBottom: 12,
+  productImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
 
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
+  postTitle: {
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 
-    title: {
-      color: isDark ? "#fff" : "#111827",
-      fontWeight: "bold",
-      fontSize: 16,
-      marginBottom: 6,
-    },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 14,
+  },
 
-    text: {
-      color: isDark ? "#cbd5e1" : "#555",
-      lineHeight: 20,
-    },
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#16A34A",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
 
-    price: {
-      color: isDark ? "#22c55e" : "#16A34A",
-      marginTop: 6,
-      fontWeight: "bold",
-    },
+  modal: {
+    flex: 1,
+    padding: 20,
+  },
 
-    rating: {
-      color: "#facc15",
-      marginTop: 6,
-      fontWeight: "600",
-    },
-
-    image: {
-      width: "100%",
-      height: 140,
-      borderRadius: 10,
-      marginBottom: 10,
-    },
-
-    fab: {
-      position: "absolute",
-      bottom: 20,
-      right: 20,
-      backgroundColor: isDark ? "#22c55e" : "#16A34A",
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      justifyContent: "center",
-      alignItems: "center",
-
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.2,
-      shadowRadius: 5,
-      elevation: 5,
-    },
-
-    fabText: {
-      color: "#fff",
-      fontSize: 30,
-      fontWeight: "300",
-    },
-
-    modalContainer: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.7)",
-      justifyContent: "center",
-      padding: 20,
-    },
-
-    modalContent: {
-      backgroundColor: isDark ? "#1e293b" : "#fff",
-      borderRadius: 16,
-      padding: 20,
-    },
-
-    imagePicker: {
-      backgroundColor: isDark ? "#334155" : "#E5E7EB",
-      padding: 14,
-      borderRadius: 10,
-      alignItems: "center",
-      marginBottom: 12,
-    },
-
-    imagePickerText: {
-      color: isDark ? "#fff" : "#111",
-      fontWeight: "600",
-    },
-
-    preview: {
-      width: "100%",
-      height: 180,
-      borderRadius: 12,
-      marginBottom: 12,
-    },
-
-    cancelBtn: {
-      backgroundColor: "#ef4444",
-      padding: 14,
-      borderRadius: 10,
-      alignItems: "center",
-      marginTop: 12,
-    },
-
-    cancelText: {
-      color: "#fff",
-      fontWeight: "700",
-    },
-  });
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+});
