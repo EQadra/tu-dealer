@@ -70,10 +70,21 @@ export default function NotificacionesScreen() {
     <SafeAreaView style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-         <TouchableOpacity onPress={() => router.back()}>
-                      <MaterialCommunityIcons name="chevron-left" size={28} color="#111" />
-                    </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            borderWidth: 1,
+            borderColor: "red",
+            padding: 10,
+          }}
+        >
+          <MaterialCommunityIcons
+            name="chevron-left"
+            size={28}
+            color="red"
 
+          />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Notificaciones</Text>
 
         <View style={{ width: 28 }} />
@@ -179,4 +190,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 2,
   },
-});
+}); 

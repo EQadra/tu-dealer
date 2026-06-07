@@ -219,26 +219,66 @@ const getFilteredSections = () => {
      IMAGE
   ========================= */
 
-  const changeImage = async () => {
+const changeImage = async () => {
+  try {
     const image = await pickImage();
 
     if (!image) return;
 
-    if (!user?.profileType || !user?.profile?.id) {
-      Alert.alert("Error", "No se pudo identificar el perfil");
+    const roleMap = {
+      doctor: "doctor",
+      lawyer: "lawyer",
+      association: "association",
+      shop: "shop",
+    } as const;
+
+    const role =
+      roleMap[
+        user?.profileType as keyof typeof roleMap
+      ];
+
+    if (!role) {
+      Alert.alert(
+        "Error",
+        "Este perfil no permite cambiar imagen"
+      );
       return;
     }
 
     const res = await uploadImageByRole({
-      role: user.profileType,
-      id: user.profile.id,
+      role,
       image,
     });
 
+    console.log(
+      "📸 RESPUESTA UPLOAD:",
+      JSON.stringify(res, null, 2)
+    );
+
     if (res?.image) {
-      setProfileImage(res.image);
+      setProfileImage(
+        `${res.image}?t=${Date.now()}`
+      );
+
+      Alert.alert(
+        "Correcto",
+        "Imagen actualizada"
+      );
+    } else {
+      Alert.alert(
+        "Error",
+        "No se recibió la nueva imagen"
+      );
     }
-  };
+  } catch (error) {
+    console.log(error);
+
+    Alert.alert(
+      "Error",
+      "No se pudo actualizar la imagen"
+    );
+  }
+};
 
   /* =========================
      NAVIGATION
@@ -265,7 +305,9 @@ const getFilteredSections = () => {
       useNativeDriver: true,
     }).start();
   };
-
+console.log(user);
+console.log(user?.profile);
+console.log(user?.profile?.image_url);
   const closeMenu = () => {
     Animated.timing(slideAnim, {
       toValue: -280,
@@ -395,20 +437,21 @@ const getFilteredSections = () => {
             backgroundColor: colors.card,
           }}
         >
-          <Image
-            source={{
-              uri:
-                profileImage ||
-                "https://i.pravatar.cc/150",
-            }}
-            style={{
-              width: 90,
-              height: 90,
-              borderRadius: 45,
-              borderWidth: 3,
-              borderColor: colors.primary,
-            }}
-          />
+         <Image
+              key={profileImage}
+              source={{
+                uri:
+                  profileImage ||
+                  "https://i.pravatar.cc/150",
+              }}
+              style={{
+                width: 90,
+                height: 90,
+                borderRadius: 45,
+                borderWidth: 3,
+                borderColor: colors.primary,
+              }}
+            />
 
           <TouchableOpacity onPress={changeImage}>
             <Text

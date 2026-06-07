@@ -1,129 +1,125 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  ReactNode,
+  useContext,
+} from "react";
+
 import * as ImagePicker from "expo-image-picker";
-import axios from "axios";
-import { Alert } from "react-native";
-import { useAuth } from "../AuthContext";
+import api from "../../utils/axios";
 
-/* =========================
-   TYPES
-========================= */
+type Role =
+  | "doctor"
+  | "lawyer"
+  | "association"
+  | "shop";
 
-type Role = "doctor" | "lawyer" | "shop" | "association";
-
-interface UploadImageParams {
+interface UploadParams {
   role: Role;
-  id: number | string;
-  image: ImagePicker.ImagePickerAsset;
+  image: string;
 }
 
 interface ImageUploadContextType {
-  loading: boolean;
-  pickImage: () => Promise<ImagePicker.ImagePickerAsset | null>;
-  uploadImageByRole: (params: UploadImageParams) => Promise<any>;
+  pickImage: () => Promise<string | null>;
+  uploadImageByRole: (
+    params: UploadParams
+  ) => Promise<any>;
 }
 
-/* =========================
-   CONTEXT
-========================= */
+const ImageUploadContext =
+  createContext<ImageUploadContextType>(
+    {} as ImageUploadContextType
+  );
 
-const ImageUploadContext = createContext<ImageUploadContextType | undefined>(
-  undefined
-);
-
-interface Props {
+export const ImageUploadProvider = ({
+  children,
+}: {
   children: ReactNode;
-}
-
-export const ImageUploadProvider = ({ children }: Props) => {
-  const { token } = useAuth();
-  const [loading, setLoading] = useState<boolean>(false);
-
-  /* =========================
-     PICK IMAGE
-  ========================= */
-
-  const pickImage = async (): Promise<ImagePicker.ImagePickerAsset | null> => {
-    const permission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert("Permiso requerido");
-      return null;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+}) => {
+  const pickImage = async () => {
+    const result =
+      await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
     if (result.canceled) return null;
 
-    return result.assets[0];
+    return result.assets[0].uri;
   };
-
-  /* =========================
-     UPLOAD BY ROLE
-  ========================= */
 
   const uploadImageByRole = async ({
     role,
-    id,
     image,
-  }: UploadImageParams) => {
+  }: UploadParams) => {
     try {
-      setLoading(true);
-
       const formData = new FormData();
 
+      const filename =
+        image.split("/").pop() ||
+        `image-${Date.now()}.jpg`;
+
+      const ext =
+        filename
+          .split(".")
+          .pop()
+          ?.toLowerCase() || "jpg";
+
+      const mimeType =
+        ext === "png"
+          ? "image/png"
+          : ext === "webp"
+          ? "image/webp"
+          : "image/jpeg";
+
       formData.append("image", {
-        uri: image.uri,
-        name: "profile.jpg",
-        type: "image/jpeg",
+        uri: image,
+        name: filename,
+        type: mimeType,
       } as any);
 
-      let endpoint = "";
+      const endpoints = {
+        doctor: "/doctor/image",
+        lawyer: "/lawyer/image",
+        association: "/association/image",
+        shop: "/shop/image",
+      };
 
-      switch (role) {
-        case "doctor":
-          endpoint = `/doctors/upload-image/${id}`;
-          break;
-        case "lawyer":
-          endpoint = `/lawyers/upload-image/${id}`;
-          break;
-        case "shop":
-          endpoint = `/shops/upload-image/${id}`;
-          break;
-        case "association":
-          endpoint = `/associations/upload-image/${id}`;
-          break;
-        default:
-          throw new Error("Rol no soportado");
-      }
-
-      const response = await axios.post(endpoint, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
+      console.log("SUBIENDO:");
+      console.log({
+        uri: image,
+        name: filename,
+        type: mimeType,
       });
 
-      Alert.alert("Éxito", "Imagen actualizada correctamente");
+      const response = await api.post(
+        endpoints[role],
+        formData,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type":
+              "multipart/form-data",
+          },
+          transformRequest: () => formData,
+        }
+      );
 
       return response.data;
-    } catch (error) {
-      console.log("Upload error:", error);
-      Alert.alert("Error", "No se pudo subir la imagen");
-    } finally {
-      setLoading(false);
+    } catch (error: any) {
+      console.log(
+        "UPLOAD ERROR",
+        error?.response?.data || error
+      );
+
+      return null;
     }
   };
 
   return (
     <ImageUploadContext.Provider
       value={{
-        loading,
         pickImage,
         uploadImageByRole,
       }}
@@ -133,18 +129,5 @@ export const ImageUploadProvider = ({ children }: Props) => {
   );
 };
 
-/* =========================
-   HOOK
-========================= */
-
-export const useImageUpload = () => {
-  const context = useContext(ImageUploadContext);
-
-  if (!context) {
-    throw new Error(
-      "useImageUpload debe usarse dentro de ImageUploadProvider"
-    );
-  }
-
-  return context;
-};
+export const useImageUpload = () =>
+  useContext(ImageUploadContext);

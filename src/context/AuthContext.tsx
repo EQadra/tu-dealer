@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
-import api, { setAuthToken, BASE_URL } from "../utils/axios";
+import * as SecureStore from "expo-secure-store";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import api, { setAuthToken } from "../utils/axios";
 
 type ProfileType = "doctor" | "lawyer" | "association" | "shop" | "user";
 
@@ -161,32 +161,35 @@ const loadProfile = async () => {
   /* =========================
      👤 ME (CORREGIDO)
   ========================= */
-  const me = async () => {
-    setLoading(true);
+const me = async () => {
+  setLoading(true);
 
-    try {
-      await ensureToken();
+  try {
+    await ensureToken();
 
-      const profileResult = await loadProfile();
+    const meResponse = await api.get("/auth/me");
 
-      if (!baseUser) return;
+    const baseUserData = meResponse.data;
 
-      setUser({
-        id: baseUser.id,
-        name: baseUser.name,
-        email: baseUser.email,
-        profileType: profileResult.type,
-        profile: profileResult.data,
-      });
+    setBaseUser(baseUserData);
 
-    } catch (error) {
-      console.log("❌ ME ERROR", error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const profileResult = await loadProfile();
 
+    setUser({
+      id: baseUserData.id,
+      name: baseUserData.name,
+      email: baseUserData.email,
+      profileType: profileResult.type,
+      profile: profileResult.data,
+    });
+
+  } catch (error) {
+    console.log("❌ ME ERROR", error);
+    setUser(null);
+  } finally {
+    setLoading(false);
+  }
+};
   /* =========================
      🔄 RESTORE SESSION
   ========================= */

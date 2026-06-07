@@ -1,21 +1,22 @@
 import React, {
-  useState,
   useEffect,
+  useMemo,
+  useState,
 } from "react";
 
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  Modal,
-  TextInput,
-  FlatList,
-  Pressable,
   Animated,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { LinearGradient } from "expo-linear-gradient";
@@ -283,6 +284,16 @@ export default function HomeScreen() {
     setDetailVisible(false);
   };
 
+const avatar = useMemo(() => {
+  if (!user?.profile) {
+    return "https://i.pravatar.cc/150";
+  }
+
+  return user.profile.image_url
+    ? `${user.profile.image_url}?t=${Date.now()}`
+    : "https://i.pravatar.cc/150";
+}, [user]);
+
   return (
     <View
       style={[
@@ -320,15 +331,15 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity>
-          <Image
-            source={{
-              uri:
-                user?.profile?.image ||
-                user?.profile?.avatar ||
-                "https://i.pravatar.cc/150",
-            }}
-            style={styles.avatar}
-          />
+         <Image
+          source={{
+            uri:
+              user?.profile?.image_url
+                ? `${user.profile.image_url}?t=${Date.now()}`
+                : "https://i.pravatar.cc/150",
+          }}
+          style={styles.avatar}
+        />
         </TouchableOpacity>
       </LinearGradient>
 
