@@ -1,52 +1,77 @@
 import React, { useEffect, useState } from "react";
 import {
-  View,
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
-  Image,
-  StyleSheet,
-  Modal,
+  View
 } from "react-native";
-import { usePosts } from "../../../../context/PostContext";
-import { useAuth } from "../../../../context/AuthContext";
 
-const PostsScreen = () => {
-  const { posts, fetchPosts, createPost, deletePost } = usePosts();
+import * as ImagePicker from "expo-image-picker";
+
+import { useAuth } from "../../../../context/AuthContext";
+import { usePosts } from "../../../../context/PostContext";
+
+export default function PostsScreen() {
+  const {
+    posts,
+    fetchMyPosts,
+    createPost,
+    deletePost,
+  } = usePosts();
+
   const { user } = useAuth();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [image, setImage] = useState("");
+  const [image, setImage] = useState<string | null>(null);
 
   const [showModal, setShowModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchPosts();
+    loadPosts();
   }, []);
 
-  /* ======================
-     ➕ CREAR POST
-  ====================== */
-  const handleCreate = async () => {
-    if (!title || !content) return;
+  const loadPosts = async () => {
+    await fetchMyPosts();
+  };
 
-    try {
-      await createPost({ title, content, image });
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      quality: 0.8,
+    });
 
-      setTitle("");
-      setContent("");
-      setImage("");
-    } catch (error) {
-      console.log("Error creando post", error);
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
     }
   };
 
-  /* ======================
-     🗑 ELIMINAR POST
-  ====================== */
+  const handleCreate = async () => {
+    if (!title.trim() || !content.trim()) return;
+
+    try {
+      await createPost({
+        title,
+        content,
+        image,
+      });
+
+      setTitle("");
+      setContent("");
+      setImage(null);
+
+      await loadPosts();
+    } catch (error) {
+      console.log("Error creando post:", error);
+    }
+  };
+
   const confirmDelete = (id: number) => {
     setSelectedId(id);
     setShowModal(true);
@@ -55,40 +80,72 @@ const PostsScreen = () => {
   const handleDelete = async () => {
     if (!selectedId) return;
 
-    await deletePost(selectedId);
-    setShowModal(false);
-    setSelectedId(null);
+    try {
+      await deletePost(selectedId);
+
+      setSelectedId(null);
+      setShowModal(false);
+
+      await loadPosts();
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  /* ======================
-     🖼 RENDER ITEM
-  ====================== */
-  const renderItem = ({ item }: any) => (
-    <View style={styles.card}>
-      <Text style={styles.user}>{item.user?.name}</Text>
+  const renderPost = ({ item }: any) => (
+    <View style={styles.postCard}>
+      <View style={styles.postHeader}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {item.user?.name?.charAt(0)?.toUpperCase() || "U"}
+          </Text>
+        </View>
 
-      {item.image_url && (
-        <Image source={{ uri: item.image_url }} style={styles.image} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.userName}>
+            {item.user?.name}
+          </Text>
+
+          <Text style={styles.postDate}>
+            {new Date(item.created_at).toLocaleDateString()}
+          </Text>
+        </View>
+      </View>
+
+      {!!item.image_url && (
+        <Image
+          source={{ uri: item.image_url }}
+          style={styles.postImage}
+        />
       )}
 
-      <Text style={styles.title}>{item.title}</Text>
-      <Text>{item.content}</Text>
+      <Text style={styles.postTitle}>
+        {item.title}
+      </Text>
 
-      {user?.id === item.user_id && (
-        <TouchableOpacity
-          onPress={() => confirmDelete(item.id)}
-          style={styles.deleteBtn}
-        >
-          <Text style={{ color: "#fff" }}>Eliminar</Text>
-        </TouchableOpacity>
-      )}
+      <Text style={styles.postContent}>
+        {item.content}
+      </Text>
+
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => confirmDelete(item.id)}
+      >
+        <Text style={styles.deleteText}>
+          Eliminar publicación
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* FORM */}
-      <View style={styles.form}>
+      {/* CREAR POST */}
+      <View style={styles.createCard}>
+        <Text style={styles.screenTitle}>
+          Mis publicaciones
+        </Text>
+
         <TextInput
           placeholder="Título"
           value={title}
@@ -97,21 +154,36 @@ const PostsScreen = () => {
         />
 
         <TextInput
-          placeholder="Contenido"
+          placeholder="¿Qué deseas publicar?"
+          multiline
           value={content}
           onChangeText={setContent}
-          style={styles.input}
+          style={[styles.input, styles.contentInput]}
         />
 
-        <TextInput
-          placeholder="URL imagen (opcional)"
-          value={image}
-          onChangeText={setImage}
-          style={styles.input}
-        />
+        <TouchableOpacity
+          style={styles.imagePicker}
+          onPress={pickImage}
+        >
+          <Text style={styles.imagePickerText}>
+            📷 Seleccionar imagen
+          </Text>
+        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={handleCreate}>
-          <Text style={{ color: "#fff" }}>Publicar</Text>
+        {image && (
+          <Image
+            source={{ uri: image }}
+            style={styles.previewImage}
+          />
+        )}
+
+        <TouchableOpacity
+          style={styles.publishButton}
+          onPress={handleCreate}
+        >
+          <Text style={styles.publishText}>
+            Publicar
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -119,16 +191,27 @@ const PostsScreen = () => {
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
+        renderItem={renderPost}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 120,
+        }}
       />
 
-      {/* MODAL TIPO NUBE */}
-      <Modal transparent visible={showModal} animationType="fade">
+      {/* MODAL ELIMINAR */}
+      <Modal
+        visible={showModal}
+        transparent
+        animationType="fade"
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>¿Eliminar post?</Text>
+            <Text style={styles.modalTitle}>
+              ¿Eliminar publicación?
+            </Text>
+
             <Text style={styles.modalText}>
-              Esta acción no se puede deshacer
+              Esta acción no se puede deshacer.
             </Text>
 
             <View style={styles.modalActions}>
@@ -143,7 +226,9 @@ const PostsScreen = () => {
                 style={styles.confirmBtn}
                 onPress={handleDelete}
               >
-                <Text style={{ color: "#fff" }}>Eliminar</Text>
+                <Text style={{ color: "#fff" }}>
+                  Eliminar
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -151,82 +236,151 @@ const PostsScreen = () => {
       </Modal>
     </View>
   );
-};
+}
 
-
-
-export default PostsScreen;
 
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-    padding: 10,
+    backgroundColor: "#F4F6F8",
   },
 
-  /* FORM */
-  form: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 10,
-    elevation: 3,
+  createCard: {
+    backgroundColor: "#FFF",
+    margin: 15,
+    padding: 15,
+    borderRadius: 16,
+    elevation: 2,
+  },
+
+  screenTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 15,
+    color: "#111827",
   },
 
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 8,
-    backgroundColor: "#fafafa",
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FAFAFA",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
   },
 
-  button: {
-    backgroundColor: "#4CAF50",
-    padding: 12,
-    borderRadius: 8,
+  contentInput: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+
+  imagePicker: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#16A34A",
+    borderRadius: 12,
+    padding: 15,
     alignItems: "center",
+    marginBottom: 10,
+    backgroundColor: "#F0FDF4",
   },
 
-  /* CARD POST */
-  card: {
-    backgroundColor: "#fff",
-    padding: 12,
+  imagePickerText: {
+    color: "#16A34A",
+    fontWeight: "600",
+  },
+
+  previewImage: {
+    width: "100%",
+    height: 220,
     borderRadius: 12,
     marginBottom: 10,
-    elevation: 2,
   },
 
-  user: {
-    fontWeight: "bold",
-    marginBottom: 5,
-    color: "#333",
-  },
-
-  title: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginVertical: 5,
-  },
-
-  image: {
-    width: "100%",
-    height: 180,
-    borderRadius: 10,
-    marginVertical: 8,
-  },
-
-  deleteBtn: {
-    marginTop: 10,
-    backgroundColor: "#e53935",
-    padding: 8,
-    borderRadius: 8,
+  publishButton: {
+    backgroundColor: "#16A34A",
+    padding: 14,
+    borderRadius: 12,
     alignItems: "center",
   },
 
-  /* MODAL */
+  publishText: {
+    color: "#FFF",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  postCard: {
+    backgroundColor: "#FFF",
+    marginHorizontal: 15,
+    marginBottom: 12,
+    borderRadius: 16,
+    padding: 15,
+  },
+
+  postHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#16A34A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+
+  avatarText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  userName: {
+    fontWeight: "700",
+    fontSize: 16,
+  },
+
+  postDate: {
+    color: "#6B7280",
+    fontSize: 12,
+  },
+
+  postTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 8,
+    color: "#111827",
+  },
+
+  postContent: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#374151",
+  },
+
+  postImage: {
+    width: "100%",
+    height: 220,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+
+  deleteButton: {
+    alignSelf: "flex-end",
+    marginTop: 12,
+  },
+
+  deleteText: {
+    color: "#DC2626",
+    fontWeight: "600",
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -235,40 +389,40 @@ const styles = StyleSheet.create({
   },
 
   modalBox: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 15,
+    width: "85%",
+    backgroundColor: "#FFF",
+    borderRadius: 16,
     padding: 20,
-    alignItems: "center",
   },
 
   modalTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontWeight: "700",
+    marginBottom: 8,
   },
 
   modalText: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 15,
-    textAlign: "center",
+    color: "#6B7280",
+    marginBottom: 20,
   },
 
   modalActions: {
     flexDirection: "row",
-    gap: 10,
+    justifyContent: "flex-end",
   },
 
   cancelBtn: {
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#ddd",
+    backgroundColor: "#E5E7EB",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginRight: 10,
   },
 
   confirmBtn: {
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#e53935",
+    backgroundColor: "#DC2626",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 });

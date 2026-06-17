@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from "react";
 import {
-  View,
+  Alert,
+  FlatList,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList,
-  Image,
-  StyleSheet,
-  Alert,
+  View
 } from "react-native";
-import { useNews } from "../../../../context/NewsContext";
 import { useAuth } from "../../../../context/AuthContext";
+import { useNews } from "../../../../context/NewsContext";
 
 const NewsScreen = () => {
   const { news, fetchNews, createNews, deleteNews } = useNews();
   const { user } = useAuth();
-
+const [url, setUrl] = useState("");
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
 
@@ -29,11 +28,12 @@ const NewsScreen = () => {
   const handleCreate = async () => {
     if (!titulo || !descripcion) return;
 
-    const formData = new FormData();
-    formData.append("titulo", titulo);
-    formData.append("descripcion", descripcion);
+const formData = new FormData();
 
-    try {
+  formData.append("titulo", titulo);
+  formData.append("descripcion", descripcion);
+  formData.append("url", url);
+      try {
       await createNews(formData);
 
       setTitulo("");
@@ -68,53 +68,68 @@ const NewsScreen = () => {
      🖼 ITEM
   ====================== */
   const renderItem = ({ item }: any) => (
-    <View style={styles.card}>
-      <Text style={styles.user}>{item.user?.name}</Text>
+   <View style={styles.card}>
+  <Text style={styles.title}>
+    {item.titulo}
+  </Text>
 
-      {item.image && (
-        <Image
-          source={{ uri: `http://TU_BACKEND/storage/${item.image}` }}
-          style={styles.image}
-        />
-      )}
+  <Text style={styles.description}>
+    {item.descripcion}
+  </Text>
 
-      <Text style={styles.title}>{item.titulo}</Text>
-      <Text>{item.descripcion}</Text>
-
-      {/* SOLO dueño */}
-      {user?.id === item.user?.id && (
-        <TouchableOpacity
-          onPress={() => handleDelete(item.id)}
-          style={styles.deleteBtn}
-        >
-          <Text style={{ color: "#fff" }}>Eliminar</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+  {item.url && (
+    <TouchableOpacity>
+      <Text style={styles.link}>
+        Ver fuente →
+      </Text>
+    </TouchableOpacity>
+  )}
+</View>
   );
 
   return (
     <View style={styles.container}>
       {/* FORM */}
       <View style={styles.form}>
-        <TextInput
-          placeholder="Título"
-          value={titulo}
-          onChangeText={setTitulo}
-          style={styles.input}
-        />
+  <Text style={styles.formTitle}>
+    Publicar noticia
+  </Text>
 
-        <TextInput
-          placeholder="Descripción"
-          value={descripcion}
-          onChangeText={setDescripcion}
-          style={styles.input}
-        />
+  <TextInput
+    placeholder="📰 Título de la noticia"
+    value={titulo}
+    onChangeText={setTitulo}
+    style={styles.input}
+  />
 
-        <TouchableOpacity style={styles.button} onPress={handleCreate}>
-          <Text style={{ color: "#fff" }}>Publicar</Text>
-        </TouchableOpacity>
-      </View>
+  <TextInput
+    placeholder="✍️ Describe la noticia..."
+    value={descripcion}
+    onChangeText={setDescripcion}
+    multiline
+    numberOfLines={4}
+    style={[styles.input, styles.textArea]}
+  />
+
+  <TextInput
+    placeholder="🔗 Enlace de la noticia (https://...)"
+    value={url}
+    onChangeText={setUrl}
+    keyboardType="url"
+    autoCapitalize="none"
+    autoCorrect={false}
+    style={styles.input}
+  />
+
+  <TouchableOpacity
+    style={styles.button}
+    onPress={handleCreate}
+  >
+    <Text style={styles.buttonText}>
+      Publicar noticia
+    </Text>
+  </TouchableOpacity>
+</View>
 
       {/* LISTA */}
       <FlatList
@@ -180,7 +195,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
   },
+formTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#222",
+  marginBottom: 15,
+},
 
+textArea: {
+  minHeight: 100,
+  textAlignVertical: "top",
+},
+
+buttonText: {
+  color: "#fff",
+  fontWeight: "700",
+  fontSize: 15,
+},
   deleteBtn: {
     marginTop: 10,
     backgroundColor: "red",
@@ -188,6 +219,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
+
+  description: {
+  fontSize: 14,
+  color: "#555",
+  lineHeight: 22,
+  marginTop: 8,
+  marginBottom: 12,
+},
+
+link: {
+  color: "#2E7D32",
+  fontWeight: "600",
+  fontSize: 14,
+},
+
+
 });
 
 export default NewsScreen;

@@ -1,17 +1,17 @@
 // src/context/PostContext.tsx
 import React, {
   createContext,
+  ReactNode,
   useContext,
   useState,
-  ReactNode,
 } from "react";
-import api from "../utils/axios";
 import { Post } from "../types/post";
+import api from "../utils/axios";
 
 interface CreatePostPayload {
   title: string;
   content: string;
-  image?: string;
+  image?: any;
   category?: string;
 }
 
@@ -22,6 +22,7 @@ interface PostContextProps {
 
   fetchPosts: () => Promise<void>;
   fetchHomePosts: () => Promise<void>;
+  fetchMyPosts: () => Promise<void>;
 
   createPost: (data: CreatePostPayload) => Promise<Post>;
   deletePost: (id: number) => Promise<void>;
@@ -82,30 +83,54 @@ export const PostProvider = ({
   /* =========================
      ➕ CREATE POST
   ========================= */
-  const createPost = async (
-    data: CreatePostPayload
-  ): Promise<Post> => {
-    setLoading(true);
-    setError(null);
+const createPost = async (
+  data: CreatePostPayload
+): Promise<Post> => {
+  setLoading(true);
 
-    try {
-      const res = await api.post("/posts", data);
+  try {
+    const formData = new FormData();
 
-      // 🔥 backend devuelve { message, data }
-      const newPost: Post = res.data.data;
+    formData.append("title", data.title);
+    formData.append("content", data.content);
 
-      setPosts((prev) => [newPost, ...prev]);
-
-      return newPost;
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Error al crear post"
-      );
-      throw err;
-    } finally {
-      setLoading(false);
+    if (data.category) {
+      formData.append("category", data.category);
     }
-  };
+
+    if (data.image) {
+      formData.append("image", {
+        uri: data.image,
+        name: "post.jpg",
+        type: "image/jpeg",
+      } as any);
+    }
+
+    const res = await api.post(
+      "/posts",
+      formData,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      }
+    );
+
+    const newPost = res.data.data;
+
+    setPosts((prev) => [
+      newPost,
+      ...prev,
+    ]);
+
+    return newPost;
+  } catch (err: any) {
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* =========================
      🗑 DELETE POST
@@ -131,6 +156,17 @@ export const PostProvider = ({
     }
   };
 
+const fetchMyPosts = async () => {
+  try {
+    const response = await api.get("/my-posts/latestPosts");
+
+    console.log("POSTS =>", JSON.stringify(response.data, null, 2));
+
+    setPosts(response.data);
+  } catch (error) {
+    console.log(error);
+  }
+};
   return (
     <PostContext.Provider
       value={{
@@ -138,6 +174,7 @@ export const PostProvider = ({
         loading,
         error,
         fetchPosts,
+        fetchMyPosts,
         fetchHomePosts,
         createPost,
         deletePost,

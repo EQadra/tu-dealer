@@ -49,11 +49,9 @@ export default function AboutUs() {
                <MaterialCommunityIcons name="chevron-left" size={28} color="#111" />
              </TouchableOpacity>
      
-             <Text style={styles.headerTitle}>Favoritos</Text>
-     
-             <TouchableOpacity>
-               <MaterialCommunityIcons name="dots-horizontal" size={24} color="#111" />
-             </TouchableOpacity>
+             <Text style={styles.headerTitle}>Tu Dealer </Text>
+     {/* HEADER */}
+          
            </View>
 
       {/* DESCRIPCIÓN */}
@@ -271,18 +269,17 @@ export default function AboutUs() {
 
 const styles = StyleSheet.create({
   paragraph: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 24,
     marginBottom: 16,
+    textAlign: "justify",
   },
-
   card: {
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
   },
-
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
