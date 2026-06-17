@@ -1,28 +1,26 @@
 import React, {
   createContext,
+  ReactNode,
   useContext,
   useState,
-  ReactNode,
 } from "react";
-import api from "../utils/axios";
 import { News } from "../types/news";
+import api from "../utils/axios";
 
 interface NewsContextProps {
   news: News[];
-  latestNews: News[];
   loading: boolean;
   error: string | null;
 
   fetchNews: () => Promise<void>;
-  fetchLatestNews: () => Promise<void>;
   fetchHomeNews: () => Promise<void>;
-
   getNewsById: (id: number) => Promise<News | null>;
+  fetchMyLatestNews: () => Promise<void>;
   createNews: (data: FormData) => Promise<void>;
   updateNews: (id: number, data: any) => Promise<void>;
   deleteNews: (id: number) => Promise<void>;
 
-  addComment: (newsId: number, content: string) => Promise<void>; // 👈 NUEVO
+  addComment: (newsId: number, content: string) => Promise<void>;
 }
 
 const NewsContext = createContext<NewsContextProps>(
@@ -31,13 +29,14 @@ const NewsContext = createContext<NewsContextProps>(
 
 export const NewsProvider = ({ children }: { children: ReactNode }) => {
   const [news, setNews] = useState<News[]>([]);
-  const [latestNews, setLatestNews] = useState<News[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ LISTADO GENERAL
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
+
     try {
       const res = await api.get("/news");
       setNews(res.data);
@@ -48,37 +47,23 @@ export const NewsProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const fetchLatestNews = async () => {
+  // ✅ HOME
+  const fetchHomeNews = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const res = await api.get("/news/latest");
-      setLatestNews(res.data);
-    } catch {
-      setError("Error al cargar noticias recientes");
+      const res = await api.get("/news/home");
+      setNews(res.data.data || res.data);
+    } catch (err: any) {
+      console.log(err);
+      setError("Error al cargar home news");
     } finally {
       setLoading(false);
     }
   };
 
-const fetchHomeNews = async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const res = await api.get("/news/home");
-
-    console.log("RESPONSE:", res.data); // 👈 DEBUG
-
-    setNews(res.data.data || res.data); // 👈 FIX CLAVE
-  } catch (err: any) {
-    console.log("ERROR:", err.response?.data || err);
-    setError("Error al cargar noticias del home");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  // ✅ GET BY ID
   const getNewsById = async (id: number) => {
     try {
       const res = await api.get(`/news/${id}`);
@@ -89,13 +74,15 @@ const fetchHomeNews = async () => {
     }
   };
 
+  // ✅ CREATE
   const createNews = async (data: FormData) => {
     setLoading(true);
     try {
       await api.post("/news", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      await fetchNews();
+
+      await fetchNews(); // refresca lista
     } catch {
       setError("Error al crear noticia");
     } finally {
@@ -103,6 +90,7 @@ const fetchHomeNews = async () => {
     }
   };
 
+  // ✅ UPDATE
   const updateNews = async (id: number, data: any) => {
     setLoading(true);
     try {
@@ -115,6 +103,7 @@ const fetchHomeNews = async () => {
     }
   };
 
+  // ✅ DELETE
   const deleteNews = async (id: number) => {
     setLoading(true);
     try {
@@ -127,35 +116,49 @@ const fetchHomeNews = async () => {
     }
   };
 
-  // ✅ NUEVO: comentar correctamente
+  // ✅ COMMENTS
   const addComment = async (newsId: number, content: string) => {
     try {
-      await api.post(`/news/${newsId}/comments`, {
-        content,
-      });
-
-      // refresca noticias con comentarios actualizados
-      await fetchHomeNews();
+      await api.post(`/news/${newsId}/comments`, { content });
+      await fetchNews();
     } catch (error) {
       console.log("Error comentando", error);
     }
   };
 
+  const fetchMyLatestNews = async () => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const res = await api.get("/my-news/latestNews");
+
+    console.log("MY LATEST NEWS:", res.data); // 🔥 debug importante
+
+    setNews(res.data); // ✅ IMPORTANTE: usa el estado principal
+  } catch (err: any) {
+    console.log("ERROR myLatestNews:", err.response?.data || err);
+    setError("Error al cargar mis noticias");
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <NewsContext.Provider
       value={{
         news,
-        latestNews,
         loading,
         error,
+
         fetchNews,
-        fetchLatestNews,
         fetchHomeNews,
-        getNewsById: async () => null,
-        createNews: async () => {},
-        updateNews: async () => {},
-        deleteNews: async () => {},
-        addComment, // 👈 IMPORTANTE
+        getNewsById,
+fetchMyLatestNews,
+        createNews,
+        updateNews,
+        deleteNews,
+        addComment,
       }}
     >
       {children}
