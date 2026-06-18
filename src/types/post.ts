@@ -1,18 +1,40 @@
 // src/types/post.ts
-import { User } from './user';
-import { Comment } from './comment';
+export interface PostComment {
+  id: number;
+  content: string;
+  user: {
+    id: number;
+    name: string;
+    url?: string;
+  };
+  created_at: string;
+  updated_at?: string;
+}
 
 export interface Post {
   id: number;
   title: string;
   content: string;
-  short_content?: string;
-  image?: string | null;
-  image_url?: string | null;
+  image?: string;
+  image_url?: string;
   category?: string;
-
-  user?: User;
-  comments?: Comment[];
-
   created_at: string;
+  updated_at?: string;
+  user: {
+    id: number;
+    name: string;
+    email?: string;
+  };
+  postable_type?: string;
+  postable_id?: number;
+  postable?: {
+    id: number;
+    first_name?: string;
+    last_name?: string;
+    name?: string;
+  };
+  comments: PostComment[];
+  likes_count?: number;
+  liked?: boolean;
+  comments_count?: number;
 }

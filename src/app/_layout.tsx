@@ -6,6 +6,8 @@ import "../global.css";
 
 import { AuthProvider } from "../context/AuthContext";
 import { NewsProvider } from "../context/NewsContext";
+
+import { NewsRoleProvider } from "../context/NewsRoleContext";
 import { ImageUploadProvider } from "../context/app/ImageUploadContext";
 
 import { AssociationProvider } from "../context/AssociationContext";
@@ -117,6 +119,8 @@ export default function RootLayout(): JSX.Element {
       <AuthProvider>
         <DarkModeProvider>
           <AssociationProvider>
+              <NewsRoleProvider>
+
             <NewsProvider>
             <ImageUploadProvider>
               <PostProvider>  
@@ -137,6 +141,8 @@ export default function RootLayout(): JSX.Element {
                         </ImageUploadProvider>
 
             </NewsProvider>
+              </NewsRoleProvider>
+
           </AssociationProvider>
         </DarkModeProvider>
       </AuthProvider>

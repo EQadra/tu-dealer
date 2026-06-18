@@ -11,6 +11,7 @@ interface AuthUser {
   email: string;
   profileType?: ProfileType;
   profile?: any;
+  avatar?: string;
 }
 
 interface AuthContextProps {
@@ -36,13 +37,16 @@ interface AuthContextProps {
     password: string;
     password_confirmation: string;
   }) => Promise<void>;
+
+  // ✅ NUEVO MÉTODO
+  updateUserProfile: (data: Partial<AuthUser>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({} as AuthContextProps);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [baseUser, setBaseUser] = useState<any>(null); // ✅ NUEVO
+  const [baseUser, setBaseUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -57,35 +61,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   /* =========================
      🔍 Detectar perfil real
   ========================= */
-const loadProfile = async () => {
-  await ensureToken();
+  const loadProfile = async () => {
+    await ensureToken();
 
-  const tryEndpoint = async (url: string, type: ProfileType) => {
-    try {
-      const res = await api.get(url);
-      return { type, data: res.data };
-    } catch (err: any) {
-      if (err.response?.status === 404) {
-        return null; // 👈 esperado
+    const tryEndpoint = async (url: string, type: ProfileType) => {
+      try {
+        const res = await api.get(url);
+        return { type, data: res.data };
+      } catch (err: any) {
+        if (err.response?.status === 404) {
+          return null;
+        }
+        throw err;
       }
-      throw err; // 👈 error real (500, network, etc)
+    };
+
+    const endpoints = [
+      ["/doctors/me", "doctor"],
+      ["/lawyers/me", "lawyer"],
+      ["/associations/me", "association"],
+      ["/shops/me", "shop"],
+    ] as [string, ProfileType][];
+
+    for (const [url, type] of endpoints) {
+      const result = await tryEndpoint(url, type);
+      if (result) return result;
     }
+
+    return { type: "user", data: null };
   };
-
-  const endpoints = [
-    ["/doctors/me", "doctor"],
-    ["/lawyers/me", "lawyer"],
-    ["/associations/me", "association"],
-    ["/shops/me", "shop"],
-  ] as [string, ProfileType][];
-
-  for (const [url, type] of endpoints) {
-    const result = await tryEndpoint(url, type);
-    if (result) return result;
-  }
-
-  return { type: "user", data: null };
-};
 
   /* =========================
      🔐 LOGIN
@@ -104,7 +108,7 @@ const loadProfile = async () => {
       await SecureStore.setItemAsync("token", access_token);
       await setAuthToken(access_token);
 
-      setBaseUser(baseUserData); // ✅ guardar base user
+      setBaseUser(baseUserData);
 
       const profileResult = await loadProfile();
 
@@ -138,7 +142,7 @@ const loadProfile = async () => {
       await SecureStore.setItemAsync("token", access_token);
       await setAuthToken(access_token);
 
-      setBaseUser(baseUserData); // ✅ guardar base user
+      setBaseUser(baseUserData);
 
       const profileResult = await loadProfile();
 
@@ -159,37 +163,37 @@ const loadProfile = async () => {
   };
 
   /* =========================
-     👤 ME (CORREGIDO)
+     👤 ME
   ========================= */
-const me = async () => {
-  setLoading(true);
+  const me = async () => {
+    setLoading(true);
 
-  try {
-    await ensureToken();
+    try {
+      await ensureToken();
 
-    const meResponse = await api.get("/auth/me");
+      const meResponse = await api.get("/auth/me");
+      const baseUserData = meResponse.data;
 
-    const baseUserData = meResponse.data;
+      setBaseUser(baseUserData);
 
-    setBaseUser(baseUserData);
+      const profileResult = await loadProfile();
 
-    const profileResult = await loadProfile();
+      setUser({
+        id: baseUserData.id,
+        name: baseUserData.name,
+        email: baseUserData.email,
+        profileType: profileResult.type,
+        profile: profileResult.data,
+      });
 
-    setUser({
-      id: baseUserData.id,
-      name: baseUserData.name,
-      email: baseUserData.email,
-      profileType: profileResult.type,
-      profile: profileResult.data,
-    });
+    } catch (error) {
+      console.log("❌ ME ERROR", error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  } catch (error) {
-    console.log("❌ ME ERROR", error);
-    setUser(null);
-  } finally {
-    setLoading(false);
-  }
-};
   /* =========================
      🔄 RESTORE SESSION
   ========================= */
@@ -239,7 +243,41 @@ const me = async () => {
     await SecureStore.deleteItemAsync("token");
     await setAuthToken(null);
     setUser(null);
-    setBaseUser(null); // ✅ limpiar también
+    setBaseUser(null);
+  };
+
+  /* =========================
+     ✅ UPDATE USER PROFILE - NUEVO MÉTODO
+  ========================= */
+  const updateUserProfile = async (data: Partial<AuthUser>) => {
+    try {
+      // Actualizar el estado del usuario
+      setUser((prev) => {
+        if (!prev) return prev;
+        return { ...prev, ...data };
+      });
+
+      // También actualizar baseUser si es necesario
+      if (data.profile !== undefined) {
+        setBaseUser((prev: any) => ({
+          ...prev,
+          profile: data.profile,
+        }));
+      }
+
+      // Si hay avatar, actualizar también
+      if (data.avatar !== undefined) {
+        setBaseUser((prev: any) => ({
+          ...prev,
+          avatar: data.avatar,
+        }));
+      }
+
+      console.log("✅ Perfil actualizado correctamente");
+    } catch (error) {
+      console.error("❌ Error al actualizar perfil:", error);
+      throw error;
+    }
   };
 
   return (
@@ -255,6 +293,7 @@ const me = async () => {
         forgotPassword,
         resetPassword,
         changePassword,
+        updateUserProfile, // ✅ EXPORTAR NUEVO MÉTODO
       }}
     >
       {children}

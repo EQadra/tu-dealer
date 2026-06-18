@@ -113,113 +113,64 @@ export const ServiceProvider = ({
      CREATE SERVICE
   ========================================= */
 
-  const createService = async (
-    data: CreateServicePayload
-  ): Promise<Service> => {
-    try {
-      setLoading(true);
-      setError(null);
+// context/ServiceContext.tsx - En createService()
 
-      const payload = {
-        ...data,
+const createService = async (data: CreateServicePayload): Promise<Service> => {
+  try {
+    setLoading(true);
+    setError(null);
 
-        // 🔥 asegurar tipos
-        price: Number(data.price),
+    const payload = {
+      ...data,
+      price: Number(data.price),
+      duration: data.duration ? String(data.duration) : null, // 👈 CONVERTIR A STRING
+    };
 
-        duration: data.duration
-          ? Number(data.duration)
-          : null,
-      };
+    const res = await api.post("/services", payload);
+    const newService: Service = res.data.data;
 
-      const res = await api.post(
-        "/services",
-        payload
-      );
+    setServices((prev) => [newService, ...prev]);
+    return newService;
+  } catch (err: any) {
+    console.log("CREATE SERVICE ERROR:", err?.response?.data || err);
+    setError(err?.response?.data?.message || "Error creating service");
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
 
-      const newService: Service =
-        res.data.data;
+// En updateService()
+const updateService = async (
+  id: number,
+  data: Partial<CreateServicePayload>
+): Promise<Service> => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      setServices((prev) => [
-        newService,
-        ...prev,
-      ]);
+    const payload = {
+      ...data,
+      price: data.price ? Number(data.price) : undefined,
+      duration: data.duration ? String(data.duration) : undefined, // 👈 CONVERTIR A STRING
+    };
 
-      return newService;
-    } catch (err: any) {
-      console.log(
-        "CREATE SERVICE ERROR:",
-        err?.response?.data || err
-      );
+    const res = await api.put(`/services/${id}`, payload);
+    const updated: Service = res.data.data;
 
-      setError(
-        err?.response?.data?.message ||
-          "Error creating service"
-      );
+    setServices((prev) =>
+      prev.map((item) => (item.id === id ? updated : item))
+    );
 
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* =========================================
-     UPDATE SERVICE
-  ========================================= */
-
-  const updateService = async (
-    id: number,
-    data: Partial<CreateServicePayload>
-  ): Promise<Service> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const payload = {
-        ...data,
-
-        price: data.price
-          ? Number(data.price)
-          : undefined,
-
-        duration: data.duration
-          ? Number(data.duration)
-          : undefined,
-      };
-
-      const res = await api.put(
-        `/services/${id}`,
-        payload
-      );
-
-      const updated: Service =
-        res.data.data;
-
-      setServices((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? updated
-            : item
-        )
-      );
-
-      return updated;
-    } catch (err: any) {
-      console.log(
-        "UPDATE SERVICE ERROR:",
-        err?.response?.data || err
-      );
-
-      setError(
-        err?.response?.data?.message ||
-          "Error updating service"
-      );
-
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    return updated;
+  } catch (err: any) {
+    console.log("UPDATE SERVICE ERROR:", err?.response?.data || err);
+    setError(err?.response?.data?.message || "Error updating service");
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
   /* =========================================
      DELETE SERVICE
   ========================================= */

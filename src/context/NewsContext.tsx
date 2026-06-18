@@ -1,169 +1,153 @@
-import React, {
-  createContext,
-  ReactNode,
-  useContext,
-  useState,
-} from "react";
-import { News } from "../types/news";
+// contexts/NewsContext.tsx
+import React, { createContext, useCallback, useContext } from "react";
 import api from "../utils/axios";
 
-interface NewsContextProps {
-  news: News[];
-  loading: boolean;
-  error: string | null;
-
-  fetchNews: () => Promise<void>;
-  fetchHomeNews: () => Promise<void>;
-  getNewsById: (id: number) => Promise<News | null>;
-  fetchMyLatestNews: () => Promise<void>;
-  createNews: (data: FormData) => Promise<void>;
-  updateNews: (id: number, data: any) => Promise<void>;
-  deleteNews: (id: number) => Promise<void>;
-
-  addComment: (newsId: number, content: string) => Promise<void>;
+/* =========================
+   TYPES
+========================= */
+export interface News {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  url?: string;
+  fecha_publicacion: string;
+  created_at: string;
+  updated_at: string;
+  newable_type: string;
+  newable_id: number;
+  newable: any;
+  comments: any[];
+  liked?: boolean;
+  likes_count?: number;
 }
 
-const NewsContext = createContext<NewsContextProps>(
-  {} as NewsContextProps
-);
+interface NewsContextType {
+  // CRUD
+  createNews: (data: any) => Promise<any>;
+  updateNews: (id: number, data: any) => Promise<any>;
+  deleteNews: (id: number) => Promise<any>;
+  
+  // Likes
+  toggleLike: (id: number) => Promise<any>;
+  checkLike: (id: number) => Promise<{ liked: boolean; likes_count: number }>;
+  
+  // Obtener una noticia por ID (opcional, para detalles)
+  getNews: (id: number) => Promise<any>;
+}
 
-export const NewsProvider = ({ children }: { children: ReactNode }) => {
-  const [news, setNews] = useState<News[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+/* =========================
+   CONTEXT
+========================= */
+const NewsContext = createContext<NewsContextType | null>(null);
 
-  // ✅ LISTADO GENERAL
-  const fetchNews = async () => {
-    setLoading(true);
-    setError(null);
-
+/* =========================
+   PROVIDER
+========================= */
+export const NewsProvider = ({ children }: any) => {
+  /* =========================
+     CREATE NEWS
+  ========================== */
+  const createNews = useCallback(async (data: any) => {
     try {
-      const res = await api.get("/news");
-      setNews(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error al cargar noticias");
-    } finally {
-      setLoading(false);
+      const res = await api.post("/news", data);
+      return res.data;
+    } catch (error) {
+      console.error("Error al crear noticia:", error);
+      throw error;
     }
-  };
+  }, []);
 
-  // ✅ HOME
-  const fetchHomeNews = async () => {
-    setLoading(true);
-    setError(null);
-
+  /* =========================
+     UPDATE NEWS
+  ========================== */
+  const updateNews = useCallback(async (id: number, data: any) => {
     try {
-      const res = await api.get("/news/home");
-      setNews(res.data.data || res.data);
-    } catch (err: any) {
-      console.log(err);
-      setError("Error al cargar home news");
-    } finally {
-      setLoading(false);
+      const res = await api.put(`/news/${id}`, data);
+      return res.data;
+    } catch (error) {
+      console.error("Error al actualizar noticia:", error);
+      throw error;
     }
-  };
+  }, []);
 
-  // ✅ GET BY ID
-  const getNewsById = async (id: number) => {
+  /* =========================
+     DELETE NEWS
+  ========================== */
+  const deleteNews = useCallback(async (id: number) => {
+    try {
+      const res = await api.delete(`/news/${id}`);
+      return res.data;
+    } catch (error) {
+      console.error("Error al eliminar noticia:", error);
+      throw error;
+    }
+  }, []);
+
+  /* =========================
+     GET NEWS BY ID
+  ========================== */
+  const getNews = useCallback(async (id: number) => {
     try {
       const res = await api.get(`/news/${id}`);
       return res.data;
-    } catch {
-      setError("Error al obtener noticia");
-      return null;
-    }
-  };
-
-  // ✅ CREATE
-  const createNews = async (data: FormData) => {
-    setLoading(true);
-    try {
-      await api.post("/news", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      await fetchNews(); // refresca lista
-    } catch {
-      setError("Error al crear noticia");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ UPDATE
-  const updateNews = async (id: number, data: any) => {
-    setLoading(true);
-    try {
-      await api.put(`/news/${id}`, data);
-      await fetchNews();
-    } catch {
-      setError("Error al actualizar noticia");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ DELETE
-  const deleteNews = async (id: number) => {
-    setLoading(true);
-    try {
-      await api.delete(`/news/${id}`);
-      setNews(prev => prev.filter(n => n.id !== id));
-    } catch {
-      setError("Error al eliminar noticia");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ✅ COMMENTS
-  const addComment = async (newsId: number, content: string) => {
-    try {
-      await api.post(`/news/${newsId}/comments`, { content });
-      await fetchNews();
     } catch (error) {
-      console.log("Error comentando", error);
+      console.error("Error al obtener noticia:", error);
+      throw error;
     }
+  }, []);
+
+  /* =========================
+     TOGGLE LIKE (Dar/Quitar like)
+  ========================== */
+  const toggleLike = useCallback(async (id: number) => {
+    try {
+      const res = await api.post(`/news/${id}/like`);
+      return res.data;
+    } catch (error) {
+      console.error("Error al toggle like:", error);
+      throw error;
+    }
+  }, []);
+
+  /* =========================
+     CHECK LIKE (Verificar si ya dio like)
+  ========================== */
+  const checkLike = useCallback(async (id: number) => {
+    try {
+      const res = await api.get(`/news/${id}/check-like`);
+      return res.data.data;
+    } catch (error) {
+      console.error("Error al verificar like:", error);
+      throw error;
+    }
+  }, []);
+
+  /* =========================
+     VALUE
+  ========================== */
+  const value = {
+    createNews,
+    updateNews,
+    deleteNews,
+    getNews,
+    toggleLike,
+    checkLike,
   };
-
-  const fetchMyLatestNews = async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const res = await api.get("/my-news/latestNews");
-
-    console.log("MY LATEST NEWS:", res.data); // 🔥 debug importante
-
-    setNews(res.data); // ✅ IMPORTANTE: usa el estado principal
-  } catch (err: any) {
-    console.log("ERROR myLatestNews:", err.response?.data || err);
-    setError("Error al cargar mis noticias");
-  } finally {
-    setLoading(false);
-  }
-};
 
   return (
-    <NewsContext.Provider
-      value={{
-        news,
-        loading,
-        error,
-
-        fetchNews,
-        fetchHomeNews,
-        getNewsById,
-fetchMyLatestNews,
-        createNews,
-        updateNews,
-        deleteNews,
-        addComment,
-      }}
-    >
+    <NewsContext.Provider value={value}>
       {children}
     </NewsContext.Provider>
   );
 };
 
-export const useNews = () => useContext(NewsContext);
+/* =========================
+   HOOK
+========================= */
+export const useNews = () => {
+  const context = useContext(NewsContext);
+  if (!context) {
+    throw new Error("useNews debe usarse dentro de NewsProvider");
+  }
+  return context;
+};
