@@ -1,174 +1,223 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-} from 'react';
-import api from '../utils/axios';
-import { Product } from '../types/product';
-import { CreateProductPayload } from '../types/createProduct';
+// contexts/ProductContext.tsx
+import React, { createContext, ReactNode, useCallback, useContext, useState } from "react";
+import api from "../utils/axios";
 
-interface ProductContextProps {
+// ============================================================
+// TIPOS
+// ============================================================
+
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  stock: number;
+  image: string | null;
+  store_id: number;
+  association_id?: number;
+  productable_type?: string;
+  productable_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProductContextType {
+  // State
   products: Product[];
-  singleProduct: Product | null;
   loading: boolean;
   error: string | null;
-
+  
+  // Fetch methods
   fetchProducts: () => Promise<void>;
-    fetchLatestProducts: () => Promise<void>; // 👈 AGREGAR
-
-  fetchProductById: (id: number) => Promise<void>;
-  createProduct: (data: CreateProductPayload) => Promise<Product>;
-  updateProduct: (id: number, data: Partial<CreateProductPayload>) => Promise<Product>;
+  fetchStoreProducts: (storeId: number) => Promise<void>;
+  fetchLatestProducts: () => Promise<void>;
+  
+  // CRUD
+  createProduct: (data: any) => Promise<Product>;
+  updateProduct: (id: number, data: any) => Promise<Product>;
   deleteProduct: (id: number) => Promise<void>;
 }
 
-const ProductContext = createContext<ProductContextProps>(
-  {} as ProductContextProps
-);
+// ============================================================
+// CONTEXT
+// ============================================================
+
+const ProductContext = createContext<ProductContextType | null>(null);
+
+// ============================================================
+// PROVIDER
+// ============================================================
 
 export const ProductProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [singleProduct, setSingleProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* -----------------------------
-   | GET /products
-   ----------------------------- */
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(null);
+  // ============================================================
+  // FETCH: Todos los productos
+  // ============================================================
 
+  const fetchProducts = useCallback(async () => {
     try {
-      const res = await api.get('/products');
+      setLoading(true);
+      setError(null);
+      const res = await api.get("/products");
       setProducts(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al cargar productos');
+      console.error("Error fetching products:", err);
+      setError(err.response?.data?.message || "Error al cargar productos");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  /* -----------------------------
- | GET /products/latest
------------------------------ */
-const fetchLatestProducts = async () => {
-  setLoading(true);
-  setError(null);
+  // ============================================================
+  // FETCH: Productos por tienda
+  // ============================================================
 
-  try {
-    const res = await api.get('/products/latest');
-    setProducts(res.data);
-  } catch (err: any) {
-    setError(err.response?.data?.message || 'Error al cargar últimos productos');
-  } finally {
-    setLoading(false);
-  }
-};
-
-  /* -----------------------------
-   | GET /products/{id}
-   ----------------------------- */
-  const fetchProductById = async (id: number) => {
-    setLoading(true);
-    setError(null);
-
+  const fetchStoreProducts = useCallback(async (storeId: number) => {
     try {
-      const res = await api.get(`/products/${id}`);
-      setSingleProduct(res.data);
+      setLoading(true);
+      setError(null);
+      const res = await api.get(`/stores/${storeId}/products`);
+      setProducts(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Producto no encontrado');
+      console.error("Error fetching store products:", err);
+      setError(err.response?.data?.message || "Error al cargar productos de la tienda");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  /* -----------------------------
-   | POST /products
-   ----------------------------- */
-const createProduct = async (data: any): Promise<Product> => {
-  setLoading(true);
-  setError(null);
+  // ============================================================
+  // FETCH: Últimos 5 productos
+  // ============================================================
 
-  try {
-    const res = await api.post('/products', data, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    const created = res.data.data;
-
-    setProducts((prev) => [created, ...prev]);
-
-    return created;
-  } catch (err: any) {
-    setError(err.response?.data?.message || 'Error al crear producto');
-    throw err;
-  } finally {
-    setLoading(false);
-  }
-};
-
-  /* -----------------------------
-   | PUT /products/{id}
-   ----------------------------- */
-  const updateProduct = async (
-    id: number,
-    data: Partial<CreateProductPayload>
-  ): Promise<Product> => {
-    setLoading(true);
-    setError(null);
-
+  const fetchLatestProducts = useCallback(async () => {
     try {
-      const res = await api.put(`/api/products/${id}`, data);
-      const updated = res.data.data;
-
-      setProducts((prev) =>
-        prev.map((p) => (p.id === id ? updated : p))
-      );
-
-      if (singleProduct?.id === id) {
-        setSingleProduct(updated);
-      }
-
-      return updated;
+      setLoading(true);
+      setError(null);
+      const res = await api.get("/products/latest");
+      setProducts(res.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'No autorizado');
+      console.error("Error fetching latest products:", err);
+      setError(err.response?.data?.message || "Error al cargar productos recientes");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ============================================================
+  // CREATE: Crear producto
+  // ============================================================
+
+  const createProduct = useCallback(async (formData: any): Promise<Product> => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("📤 Creando producto...");
+      
+      const res = await api.post("/products", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      
+      console.log("✅ Producto creado:", res.data);
+      
+      const newProduct = res.data.data || res.data;
+      setProducts((prev) => [newProduct, ...prev]);
+      return newProduct;
+    } catch (err: any) {
+      console.error("❌ Error al crear producto:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Error al crear producto");
       throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  /* -----------------------------
-   | DELETE /products/{id}
-   ----------------------------- */
-  const deleteProduct = async (id: number) => {
-    setLoading(true);
-    setError(null);
+  // ============================================================
+  // UPDATE: Actualizar producto
+  // ============================================================
 
+  const updateProduct = useCallback(async (id: number, data: any): Promise<Product> => {
     try {
-      await api.delete(`/api/products/${id}`);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setLoading(true);
+      setError(null);
+      
+      console.log("📤 Actualizando producto ID:", id);
+      
+      let res;
+      
+      // Si es FormData (tiene imagen), usar POST con _method=PUT
+      if (data instanceof FormData) {
+        console.log("📤 Enviando con FormData (con imagen)");
+        res = await api.post(`/products/${id}?_method=PUT`, data, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        console.log("📤 Enviando con JSON (sin imagen)");
+        res = await api.put(`/products/${id}`, data);
+      }
+      
+      console.log("✅ Producto actualizado:", res.data);
+      
+      const updatedProduct = res.data.data || res.data;
+      setProducts((prev) =>
+        prev.map((p) => (p.id === id ? updatedProduct : p))
+      );
+      return updatedProduct;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'No autorizado');
+      console.error("❌ Error al actualizar producto:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Error al actualizar producto");
+      throw err;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // ============================================================
+  // DELETE: Eliminar producto
+  // ============================================================
+
+  const deleteProduct = useCallback(async (id: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log("🗑️ Eliminando producto ID:", id);
+      
+      await api.delete(`/products/${id}`);
+      
+      console.log("✅ Producto eliminado");
+      
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err: any) {
+      console.error("❌ Error al eliminar producto:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Error al eliminar producto");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ============================================================
+  // VALUE
+  // ============================================================
 
   return (
     <ProductContext.Provider
       value={{
         products,
-        singleProduct,
         loading,
         error,
         fetchProducts,
+        fetchStoreProducts,
         fetchLatestProducts,
-        fetchProductById,
         createProduct,
         updateProduct,
         deleteProduct,
@@ -179,4 +228,14 @@ const createProduct = async (data: any): Promise<Product> => {
   );
 };
 
-export const useProducts = () => useContext(ProductContext);
+// ============================================================
+// HOOK
+// ============================================================
+
+export const useProducts = () => {
+  const context = useContext(ProductContext);
+  if (!context) {
+    throw new Error("useProducts debe usarse dentro de ProductProvider");
+  }
+  return context;
+};
