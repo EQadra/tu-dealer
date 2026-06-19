@@ -99,15 +99,15 @@ export const NewsProvider = ({ children }: any) => {
   /* =========================
      TOGGLE LIKE (Dar/Quitar like)
   ========================== */
-  const toggleLike = useCallback(async (id: number) => {
-    try {
-      const res = await api.post(`/news/${id}/like`);
-      return res.data;
-    } catch (error) {
-      console.error("Error al toggle like:", error);
-      throw error;
-    }
-  }, []);
+const toggleLike = useCallback(async (id: number) => {
+  try {
+    const res = await api.post(`/news/${id}/like`);
+    return res.data.data;
+  } catch (error) {
+    console.error("Error al toggle like:", error);
+    throw error;
+  }
+}, []);
 
   /* =========================
      CHECK LIKE (Verificar si ya dio like)

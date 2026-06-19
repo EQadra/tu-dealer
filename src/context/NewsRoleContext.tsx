@@ -53,17 +53,25 @@ interface NewsRoleContextType {
   likedNews: News[];
   loading: boolean;
   error: string | null;
-  
+
   // Fetch methods
   fetchLatestNews: () => Promise<void>;
   fetchUserLatestNews: () => Promise<void>;
   fetchAllUserNews: () => Promise<void>;
   fetchLikedNews: () => Promise<void>;
   getNewsById: (id: number) => News | undefined;
-  
+
   // Comments
   addComment: (newsId: number, content: string) => Promise<Comment>;
-  
+
+  // 🔥 CRUD Operations (NUEVO)
+  createNews: (data: any) => Promise<any>;
+  updateNews: (id: number, data: any) => Promise<any>;
+  deleteNews: (id: number) => Promise<any>;
+
+  // Likes (NUEVO)
+  toggleLike: (id: number) => Promise<any>;
+
   // Reset
   resetNews: () => void;
 }
@@ -112,10 +120,6 @@ export const NewsRoleProvider = ({ children }: Props) => {
     } catch (err: any) {
       console.error("Error al obtener últimas noticias:", err);
       setError(err.response?.data?.message || "Error al cargar noticias");
-      if (err.response) {
-        console.error("Status:", err.response.status);
-        console.error("Data:", err.response.data);
-      }
     } finally {
       setLoading(false);
     }
@@ -129,6 +133,7 @@ export const NewsRoleProvider = ({ children }: Props) => {
       setLoading(true);
       setError(null);
       const res = await api.get("/news/my/latest");
+      console.log("🟢 Noticias obtenidas:", res.data.length);
       setUserNews(res.data);
     } catch (err: any) {
       console.error("Error al obtener noticias del usuario:", err);
@@ -173,7 +178,7 @@ export const NewsRoleProvider = ({ children }: Props) => {
   }, []);
 
   /* =========================
-     GET NEWS BY ID (de los estados locales)
+     GET NEWS BY ID
   ========================== */
   const getNewsById = useCallback(
     (id: number): News | undefined => {
@@ -196,13 +201,11 @@ export const NewsRoleProvider = ({ children }: Props) => {
         const res = await api.post(`/news/${newsId}/comments`, { content });
         const newComment = res.data.data || res.data;
 
-        // Función para actualizar comentarios en una lista
         const updateComments = (news: News) =>
           news.id === newsId
             ? { ...news, comments: [...news.comments, newComment] }
             : news;
 
-        // Actualizar todas las listas
         setLatestNews((prev) => prev.map(updateComments));
         setUserNews((prev) => prev.map(updateComments));
         setAllUserNews((prev) => prev.map(updateComments));
@@ -216,6 +219,132 @@ export const NewsRoleProvider = ({ children }: Props) => {
     },
     []
   );
+
+  /* =========================
+     🔥 CREATE NEWS (NUEVO)
+  ========================== */
+  const createNews = useCallback(async (data: any) => {
+    try {
+      // Obtener el perfil del usuario autenticado
+      const userRes = await api.get("/auth/me");
+      const user = userRes.data;
+      
+      // Determinar el tipo y ID del perfil
+      let newable_type = null;
+      let newable_id = null;
+
+      if (user.doctor) {
+        newable_type = "App\\Models\\Doctor";
+        newable_id = user.doctor.id;
+      } else if (user.lawyer) {
+        newable_type = "App\\Models\\Lawyer";
+        newable_id = user.lawyer.id;
+      } else if (user.shop) {
+        newable_type = "App\\Models\\Shop";
+        newable_id = user.shop.id;
+      } else if (user.association) {
+        newable_type = "App\\Models\\Association";
+        newable_id = user.association.id;
+      } else {
+        throw new Error("No tienes un perfil asociado para crear noticias");
+      }
+
+      // Preparar datos completos
+      const payload = {
+        titulo: data.titulo,
+        descripcion: data.descripcion,
+        url: data.url || null,
+        fecha_publicacion: data.fecha_publicacion || new Date().toISOString(),
+        newable_type: data.newable_type || newable_type,
+        newable_id: data.newable_id || newable_id,
+      };
+
+      console.log("📝 Creando noticia:", payload);
+
+      const res = await api.post("/news", payload);
+      return res.data;
+    } catch (error) {
+      console.error("Error al crear noticia:", error);
+      throw error;
+    }
+  }, []);
+
+  /* =========================
+     🔥 UPDATE NEWS (NUEVO)
+  ========================== */
+  const updateNews = useCallback(async (id: number, data: any) => {
+    try {
+      const res = await api.put(`/news/${id}`, data);
+      
+      // Actualizar las listas locales
+      const updatedNews = res.data.data || res.data;
+      
+      const updateItem = (news: News) =>
+        news.id === id ? { ...news, ...updatedNews } : news;
+
+      setLatestNews((prev) => prev.map(updateItem));
+      setUserNews((prev) => prev.map(updateItem));
+      setAllUserNews((prev) => prev.map(updateItem));
+      setLikedNews((prev) => prev.map(updateItem));
+
+      return res.data;
+    } catch (error) {
+      console.error("Error al actualizar noticia:", error);
+      throw error;
+    }
+  }, []);
+
+  /* =========================
+     🔥 DELETE NEWS (NUEVO)
+  ========================== */
+  const deleteNews = useCallback(async (id: number) => {
+    try {
+      const res = await api.delete(`/news/${id}`);
+      
+      // Eliminar de las listas locales
+      const filterItem = (news: News) => news.id !== id;
+
+      setLatestNews((prev) => prev.filter(filterItem));
+      setUserNews((prev) => prev.filter(filterItem));
+      setAllUserNews((prev) => prev.filter(filterItem));
+      setLikedNews((prev) => prev.filter(filterItem));
+
+      return res.data;
+    } catch (error) {
+      console.error("Error al eliminar noticia:", error);
+      throw error;
+    }
+  }, []);
+
+  /* =========================
+     🔥 TOGGLE LIKE (NUEVO)
+  ========================== */
+  const toggleLike = useCallback(async (id: number) => {
+    try {
+      const res = await api.post(`/news/${id}/like`);
+      const result = res.data.data;
+
+      // Actualizar el estado de like en las listas locales
+      const updateLikes = (news: News) =>
+        news.id === id
+          ? { 
+              ...news, 
+              liked: result.liked, 
+              likes_count: result.likes_count 
+            }
+          : news;
+
+      setLatestNews((prev) => prev.map(updateLikes));
+      setUserNews((prev) => prev.map(updateLikes));
+      setAllUserNews((prev) => prev.map(updateLikes));
+      setLikedNews((prev) => prev.map(updateLikes));
+
+      return result;
+    } catch (error) {
+      console.error("Error al toggle like:", error);
+      throw error;
+    }
+  }, []);
 
   /* =========================
      VALUE
@@ -237,6 +366,12 @@ export const NewsRoleProvider = ({ children }: Props) => {
       getNewsById,
       // Comments
       addComment,
+      // 🔥 CRUD
+      createNews,
+      updateNews,
+      deleteNews,
+      // Likes
+      toggleLike,
       // Reset
       resetNews,
     }),
@@ -253,6 +388,10 @@ export const NewsRoleProvider = ({ children }: Props) => {
       fetchLikedNews,
       getNewsById,
       addComment,
+      createNews,
+      updateNews,
+      deleteNews,
+      toggleLike,
       resetNews,
     ]
   );

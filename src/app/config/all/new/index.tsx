@@ -68,6 +68,8 @@ const NewsScreen = () => {
     fetchUserLatestNews,
     fetchAllUserNews,
     addComment,
+    createNews,    // <-- Importante
+    updateNews,    // <-- Importante
   } = useNewsRole();
 
   // ============================
@@ -94,13 +96,14 @@ const NewsScreen = () => {
     text: darkMode ? "#F8FAFC" : "#222222",
     secondaryText: darkMode ? "#94A3B8" : "#555555",
     border: darkMode ? "#1E293B" : "#eeeeee",
-    input: darkMode ? "#1E293B" : "#ffffff",
+    input: darkMode ? "#1E293B" : "#f5f5f5",  // Fondo gris claro para modo claro
     inputBorder: darkMode ? "#334155" : "#dddddd",
     comment: darkMode ? "#1E293B" : "#f1f1f1",
     modal: darkMode ? "#0F172A" : "#ffffff",
     green: darkMode ? "#4ADE80" : "#00B272",
     red: darkMode ? "#F87171" : "#EF4444",
     backdrop: "rgba(0,0,0,0.6)",
+    placeholder: darkMode ? "#64748B" : "#999999",
   };
 
   // ============================
@@ -193,25 +196,57 @@ const NewsScreen = () => {
   }, [commentText, activeNews, addComment]);
 
   // ============================
-  // SAVE NEWS (CREATE / UPDATE)
+  // SAVE NEWS (CREATE / UPDATE) - FUNCIÓN COMPLETA
   // ============================
   const handleSaveNews = useCallback(async () => {
+    // Validar campos obligatorios
     if (!titulo.trim() || !descripcion.trim()) {
       Alert.alert("Error", "Título y descripción son obligatorios");
       return;
     }
 
     try {
-      // Aquí iría la lógica de creación/edición
-      // Por ahora solo mostramos un mensaje
-      Alert.alert("Éxito", editingId ? "Noticia actualizada" : "Noticia creada");
+      // Preparar datos
+      const newsData = {
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        url: url.trim() || null,
+      };
+
+      let response;
+      let successMessage;
+
+      if (editingId) {
+        // Actualizar noticia existente
+        response = await updateNews(editingId, newsData);
+        successMessage = "Noticia actualizada correctamente";
+        console.log("Noticia actualizada:", response);
+      } else {
+        // Crear nueva noticia
+        response = await createNews(newsData);
+        successMessage = "Noticia creada correctamente";
+        console.log("Noticia creada:", response);
+      }
+
+      // Mostrar mensaje de éxito
+      Alert.alert("Éxito", successMessage);
       
+      // Cerrar modal y refrescar lista
       closeEditModal();
       await onRefresh();
-    } catch (error) {
-      Alert.alert("Error", "No se pudo guardar la noticia");
+      
+    } catch (error: any) {
+      console.error("Error al guardar noticia:", error);
+      
+      // Mostrar mensaje de error detallado
+      const errorMessage = 
+        error?.response?.data?.message || 
+        error?.message || 
+        "No se pudo guardar la noticia";
+      
+      Alert.alert("Error", errorMessage);
     }
-  }, [titulo, descripcion, url, editingId, closeEditModal, onRefresh]);
+  }, [titulo, descripcion, url, editingId, closeEditModal, onRefresh, createNews, updateNews]);
 
   // ============================
   // RENDER COMMENT
@@ -516,62 +551,77 @@ const NewsScreen = () => {
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                },
-              ]}
-              placeholder="Título *"
-              placeholderTextColor={colors.secondaryText}
-              value={titulo}
-              onChangeText={setTitulo}
-              maxLength={191}
-            />
+            {/* Título */}
+            <View style={styles.inputWrapper}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Título *</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.input,
+                    borderColor: colors.inputBorder,
+                    color: '#000000', // Texto siempre negro
+                  },
+                ]}
+                placeholder="Ej: Nuevo lanzamiento de producto"
+                placeholderTextColor={colors.placeholder}
+                value={titulo}
+                onChangeText={setTitulo}
+                maxLength={191}
+              />
+            </View>
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                  height: 100,
-                },
-              ]}
-              placeholder="Descripción *"
-              placeholderTextColor={colors.secondaryText}
-              value={descripcion}
-              onChangeText={setDescripcion}
-              multiline
-              maxLength={1000}
-            />
+            {/* Descripción */}
+            <View style={styles.inputWrapper}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Descripción *</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  {
+                    backgroundColor: colors.input,
+                    borderColor: colors.inputBorder,
+                    color: '#000000', // Texto siempre negro
+                  },
+                ]}
+                placeholder="Describe tu noticia en detalle..."
+                placeholderTextColor={colors.placeholder}
+                value={descripcion}
+                onChangeText={setDescripcion}
+                multiline
+                numberOfLines={4}
+                maxLength={1000}
+                textAlignVertical="top"
+              />
+            </View>
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.input,
-                  borderColor: colors.inputBorder,
-                  color: colors.text,
-                },
-              ]}
-              placeholder="URL de imagen (opcional)"
-              placeholderTextColor={colors.secondaryText}
-              value={url}
-              onChangeText={setUrl}
-              autoCapitalize="none"
-            />
+            {/* URL de imagen */}
+            <View style={styles.inputWrapper}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>URL de imagen (opcional)</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.input,
+                    borderColor: colors.inputBorder,
+                    color: '#000000', // Texto siempre negro
+                  },
+                ]}
+                placeholder="https://ejemplo.com/imagen.jpg"
+                placeholderTextColor={colors.placeholder}
+                value={url}
+                onChangeText={setUrl}
+                autoCapitalize="none"
+              />
+            </View>
 
+            {/* Botones */}
             <TouchableOpacity
               style={[styles.saveButton, { backgroundColor: colors.green }]}
               onPress={handleSaveNews}
             >
               <Text style={styles.saveButtonText}>
-                {editingId ? "Actualizar" : "Crear"}
+                {editingId ? "Actualizar noticia" : "Crear noticia"}
               </Text>
             </TouchableOpacity>
 
@@ -871,6 +921,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  inputWrapper: {
+    marginBottom: 14,
+  },
+
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+
+  textArea: {
+    minHeight: 100,
+    maxHeight: 150,
+    paddingTop: 12,
+    paddingBottom: 12,
+    textAlignVertical: "top",
+  },
+
   sendButton: {
     padding: 10,
     borderRadius: 20,
@@ -902,6 +970,8 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 14,
   },
+
+  
 });
 
 export default NewsScreen;

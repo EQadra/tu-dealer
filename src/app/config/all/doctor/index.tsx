@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
   ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useAuth } from "../../../../context/AuthContext";
@@ -74,32 +74,34 @@ export default function DoctorScreen() {
      UPDATE
   ========================================================= */
 
-  const handleUpdate = async () => {
+const handleUpdate = async () => {
     try {
+        setLoading(true);
 
-      setLoading(true);
+        // 1. Obtener el doctor actual para saber su ID
+        const { data: doctorData } = await api.get('/doctors/me');
+        const doctorId = doctorData.data?.id || doctorData.id;
 
-      await api.put("/doctors", {
-        first_name: form.first_name,
-        last_name: form.last_name,
-        specialty: form.specialty,
-        city: form.city,
-        university: form.university,
-        description: form.description,
-        schedule: form.schedule,
-      });
+        // 2. Actualizar con el ID
+        await api.put(`/doctors/${doctorId}`, {
+            first_name: form.first_name,
+            last_name: form.last_name,
+            specialty: form.specialty,
+            city: form.city,
+            university: form.university,
+            description: form.description,
+            schedule: form.schedule,
+        });
 
-      alert("✅ Perfil actualizado");
+        alert('✅ Perfil actualizado');
 
     } catch (err) {
-
-      alert("❌ Error");
-
+        console.error('❌ Error:', err);
+        alert('❌ Error al actualizar el perfil');
     } finally {
-
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   /* =========================================================
      LOADING

@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import api from "../utils/axios";
-import { Doctor } from "../types/doctor";
+import React, { createContext, ReactNode, useContext, useState } from "react";
 import { CreateDoctorPayload } from "../types/createDoctor";
+import { Doctor } from "../types/doctor";
+import api from "../utils/axios";
 
 interface DoctorContextProps {
   doctors: Doctor[];
@@ -112,28 +112,32 @@ export const DoctorProvider = ({ children }: { children: ReactNode }) => {
   /* ================================
      PUT /doctors/{id}
   ================================ */
-  const updateDoctor = async (
-    id: number,
+const updateDoctor = async (
+    id: number,  // ✅ Este es el ID que debes usar
     data: Partial<CreateDoctorPayload>
-  ): Promise<Doctor> => {
+): Promise<Doctor> => {
     setLoading(true);
     setError(null);
+    
     try {
-      const res = await api.put(`/doctors/${id}`, data);
-      const updatedDoctor = res.data.data ?? res.data;
+        // ✅ Usar el ID en la URL
+        const res = await axios.put(`/api/doctors/${id}`, data);
+        const updatedDoctor = res.data.data ?? res.data;
 
-      setDoctors((prev) =>
-        prev.map((d) => (d.id === id ? updatedDoctor : d))
-      );
+        setDoctors((prev) =>
+            prev.map((d) => (d.id === id ? updatedDoctor : d))
+        );
 
-      if (doctor?.id === id) setDoctor(updatedDoctor);
+        if (doctor?.id === id) setDoctor(updatedDoctor);
 
-      return updatedDoctor;
+        return updatedDoctor;
+    } catch (error: any) {
+        console.error('❌ Error:', error.response?.data || error.message);
+        throw error;
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
-
+};
   /* ================================
      DELETE /doctors/{id}
   ================================ */
