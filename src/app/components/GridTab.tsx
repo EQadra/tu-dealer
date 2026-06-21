@@ -1,6 +1,6 @@
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { View, Text, FlatList, Image, Modal, Pressable, TouchableOpacity, StyleSheet } from "react-native";
-import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Product = {
   id: string | number;
@@ -28,6 +28,53 @@ const GridTabs = ({ tabs, tabContent, initialTab }: GridTabsProps) => {
     setModalVisible(true);
   };
 
+  // Renderizar productos en grid de 2 columnas con View + map
+  const renderProductsGrid = () => {
+    const rows = [];
+    const itemsPerRow = 2;
+
+    for (let i = 0; i < products.length; i += itemsPerRow) {
+      const rowItems = products.slice(i, i + itemsPerRow);
+      rows.push(
+        <View key={`row-${i}`} style={styles.row}>
+          {rowItems.map((item) => (
+            <View key={item.id.toString()} style={styles.productCard}>
+              <Image
+                source={{ uri: item.image }}
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{item.name}</Text>
+                <Text style={styles.productDescription}>{item.description}</Text>
+                {item.price && (
+                  <Text style={styles.productPrice}>{item.price}</Text>
+                )}
+              </View>
+              <View style={styles.actionsContainer}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => openModal(item)}
+                >
+                  <MaterialIcons name="info-outline" size={20} color="#2A59FE" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => console.log('Add to cart', item)}
+                >
+                  <MaterialCommunityIcons name="cart-plus" size={20} color="#2A59FE" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          {/* Si la fila tiene solo 1 item, agregar un espacio vacío */}
+          {rowItems.length === 1 && <View style={styles.emptyCard} />}
+        </View>
+      );
+    }
+    return rows;
+  };
+
   return (
     <View style={styles.container}>
       {/* Tabs Navigation */}
@@ -51,43 +98,20 @@ const GridTabs = ({ tabs, tabContent, initialTab }: GridTabsProps) => {
         ))}
       </View>
 
-      {/* Products Grid */}
-      <FlatList
-        data={products}
-        numColumns={2}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.productCard}>
-            <Image
-              source={{ uri: item.image }}
-              style={styles.productImage}
-              resizeMode="cover"
-            />
-            <View style={styles.productInfo}>
-              <Text style={styles.productName}>{item.name}</Text>
-              <Text style={styles.productDescription}>{item.description}</Text>
-              {item.price && (
-                <Text style={styles.productPrice}>{item.price}</Text>
-              )}
-            </View>
-            <View style={styles.actionsContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => openModal(item)}
-              >
-                <MaterialIcons name="info-outline" size={20} color="#2A59FE" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => console.log('Add to cart', item)}
-              >
-                <MaterialCommunityIcons name="cart-plus" size={20} color="#2A59FE" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+      {/* Products Grid - View + map en lugar de FlatList */}
+      <ScrollView 
+        style={styles.scrollContainer}
         contentContainerStyle={styles.productsContainer}
-      />
+        showsVerticalScrollIndicator={false}
+      >
+        {products.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No hay productos en esta categoría</Text>
+          </View>
+        ) : (
+          renderProductsGrid()
+        )}
+      </ScrollView>
 
       {/* Product Detail Modal */}
       <Modal
@@ -133,6 +157,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#D1FAE5", // fondo verde muy claro
   },
+  scrollContainer: {
+    flex: 1,
+  },
   tabsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -162,6 +189,11 @@ const styles = StyleSheet.create({
   productsContainer: {
     padding: 8,
   },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   productCard: {
     flex: 1,
     margin: 8,
@@ -173,7 +205,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    maxWidth: '50%',
+    maxWidth: '48%',
+  },
+  emptyCard: {
+    flex: 1,
+    margin: 8,
+    maxWidth: '48%',
   },
   productImage: {
     width: '100%',
@@ -252,6 +289,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#4B5563',
+    textAlign: 'center',
   },
 });
 

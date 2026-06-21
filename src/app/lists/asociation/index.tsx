@@ -2,8 +2,8 @@ import React from "react";
 
 import {
   FlatList,
-  View,
   StyleSheet,
+  View,
 } from "react-native";
 
 import ExploreScreen from "../../components/ExploreScreen";
@@ -12,7 +12,7 @@ import LatestNews from "../../components/LatestNews";
 
 import { useDarkMode } from "../../../context/app/DarkModeContext";
 
-const AsociationListScreen = () => {
+const AssociationListScreen = () => {
 
   const { darkMode } =
     useDarkMode();
@@ -87,12 +87,12 @@ const AsociationListScreen = () => {
 
 };
 
-export default AsociationListScreen;
+export default AssociationListScreen;
 
 const styles = StyleSheet.create({
 
   container: {
-    flex: 1,
+    width: "100%",
   },
 
 });

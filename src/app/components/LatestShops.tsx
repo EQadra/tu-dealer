@@ -1,12 +1,11 @@
 import React, { useMemo } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
   ActivityIndicator,
-  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -93,13 +92,11 @@ const LatestShops = () => {
       style={[
         styles.container,
         {
-          backgroundColor:
-            colors.background,
+          backgroundColor: colors.background,
         },
       ]}
     >
       {/* HEADER */}
-
       <View style={styles.headerRow}>
         <Text
           style={[
@@ -116,8 +113,7 @@ const LatestShops = () => {
           style={[
             styles.viewAllBadge,
             {
-              backgroundColor:
-                colors.green,
+              backgroundColor: colors.green,
             },
           ]}
           onPress={() =>
@@ -137,76 +133,48 @@ const LatestShops = () => {
         </TouchableOpacity>
       </View>
 
-      {/* LIST */}
-
-      <FlatList
-        data={displayedShops}
-        keyExtractor={(item, index) =>
-          `${item.id}-${index}`
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-        contentContainerStyle={{
-          paddingHorizontal: 14,
-          paddingBottom: 20,
-        }}
-        renderItem={({ item }) => (
+      {/* LIST - Usando View + map en lugar de FlatList */}
+      <View style={styles.listContainer}>
+        {displayedShops.map((item) => (
           <TouchableOpacity
+            key={`${item.id}-${item.name}`}
             activeOpacity={0.9}
             style={[
               styles.badgeCard,
               {
-                backgroundColor:
-                  colors.card,
-                borderColor:
-                  colors.border,
+                backgroundColor: colors.card,
+                borderColor: colors.border,
               },
             ]}
             onPress={() => {
               if (!item?.id) return;
-
-              router.push(
-                `/detail/store/${item.id}`
-              );
+              router.push(`/detail/store/${item.id}`);
             }}
           >
             {/* IMAGE */}
-
             <Image
               source={{
-                uri:
-                  item.image ||
-                  "https://picsum.photos/400",
+                uri: item.image || "https://picsum.photos/400",
               }}
               style={styles.badgeImage}
             />
 
             {/* CONTENT */}
-
             <View style={styles.badgeContent}>
               {/* TOP ROW */}
-
               <View style={styles.topRow}>
                 {/* RATING LEFT */}
-
-                <View
-                  style={
-                    styles.ratingMiniBadge
-                  }
-                >
+                <View style={styles.ratingMiniBadge}>
                   <Ionicons
                     name="star"
                     size={11}
                     color="#FFD700"
                   />
-
                   <Text
                     style={[
                       styles.ratingMiniText,
                       {
-                        color:
-                          colors.text,
+                        color: colors.text,
                       },
                     ]}
                   >
@@ -215,13 +183,11 @@ const LatestShops = () => {
                 </View>
 
                 {/* STORE BADGE */}
-
                 <View
                   style={[
                     styles.storeBadge,
                     {
-                      backgroundColor:
-                        colors.green,
+                      backgroundColor: colors.green,
                     },
                   ]}
                 >
@@ -230,19 +196,13 @@ const LatestShops = () => {
                     size={10}
                     color="#fff"
                   />
-
-                  <Text
-                    style={
-                      styles.storeBadgeText
-                    }
-                  >
+                  <Text style={styles.storeBadgeText}>
                     Tienda
                   </Text>
                 </View>
               </View>
 
               {/* NAME */}
-
               <Text
                 style={[
                   styles.badgeName,
@@ -256,29 +216,24 @@ const LatestShops = () => {
               </Text>
 
               {/* DESCRIPTION */}
-
               <Text
                 style={[
                   styles.badgeDescription,
                   {
-                    color:
-                      colors.secondary,
+                    color: colors.secondary,
                   },
                 ]}
                 numberOfLines={2}
               >
-                {item.description ||
-                  "Sin descripción"}
+                {item.description || "Sin descripción"}
               </Text>
 
               {/* CITY */}
-
               <View
                 style={[
                   styles.cityBadge,
                   {
-                    backgroundColor:
-                      colors.badge,
+                    backgroundColor: colors.badge,
                   },
                 ]}
               >
@@ -287,53 +242,42 @@ const LatestShops = () => {
                   size={11}
                   color={colors.green}
                 />
-
                 <Text
                   style={[
                     styles.cityText,
                     {
-                      color:
-                        colors.green,
+                      color: colors.green,
                     },
                   ]}
                 >
-                  {item.city ||
-                    "Sin ciudad"}
+                  {item.city || "Sin ciudad"}
                 </Text>
               </View>
 
               {/* SMALL BADGES */}
-
               <View style={styles.badgesRow}>
                 <View
                   style={[
                     styles.smallBadge,
                     {
-                      backgroundColor:
-                        colors.meta,
+                      backgroundColor: colors.meta,
                     },
                   ]}
                 >
                   <Ionicons
                     name="construct-outline"
                     size={11}
-                    color={
-                      colors.secondary
-                    }
+                    color={colors.secondary}
                   />
-
                   <Text
                     style={[
                       styles.smallBadgeText,
                       {
-                        color:
-                          colors.secondary,
+                        color: colors.secondary,
                       },
                     ]}
                   >
-                    {item.services
-                      ?.length ?? 0}{" "}
-                    servicios
+                    {item.services?.length ?? 0} servicios
                   </Text>
                 </View>
 
@@ -341,38 +285,31 @@ const LatestShops = () => {
                   style={[
                     styles.smallBadge,
                     {
-                      backgroundColor:
-                        colors.meta,
+                      backgroundColor: colors.meta,
                     },
                   ]}
                 >
                   <Ionicons
                     name="bag-handle-outline"
                     size={11}
-                    color={
-                      colors.secondary
-                    }
+                    color={colors.secondary}
                   />
-
                   <Text
                     style={[
                       styles.smallBadgeText,
                       {
-                        color:
-                          colors.secondary,
+                        color: colors.secondary,
                       },
                     ]}
                   >
-                    {item.products
-                      ?.length ?? 0}{" "}
-                    productos
+                    {item.products?.length ?? 0} productos
                   </Text>
                 </View>
               </View>
             </View>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </View>
     </View>
   );
 };
@@ -415,6 +352,15 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "700",
+  },
+
+  /* =========================
+     LIST CONTAINER (NUEVO)
+  ========================= */
+
+  listContainer: {
+    paddingHorizontal: 14,
+    paddingBottom: 20,
   },
 
   /* =========================
@@ -579,8 +525,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 14,
 
-    backgroundColor:
-      "rgba(255,215,0,0.15)",
+    backgroundColor: "rgba(255,215,0,0.15)",
   },
 
   ratingMiniText: {

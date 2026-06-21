@@ -1,16 +1,15 @@
 import React, { useEffect } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
   ActivityIndicator,
-  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import { useAssociations } from "../../context/AssociationContext";
 
@@ -94,7 +93,6 @@ const LatestAssociations = () => {
   };
 
   return (
-
     <View
       style={[
         styles.container,
@@ -103,9 +101,7 @@ const LatestAssociations = () => {
         },
       ]}
     >
-
       {/* TITLE */}
-
       <Text
         style={[
           styles.sectionTitle,
@@ -115,20 +111,11 @@ const LatestAssociations = () => {
         Últimas Asociaciones
       </Text>
 
-      {/* LIST */}
-
-      <FlatList
-        key="vertical-associations"
-        data={latestAssociations}
-        keyExtractor={(item) =>
-          item.id.toString()
-        }
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-
-        renderItem={({ item }) => (
-
+      {/* LIST - View + map en lugar de FlatList */}
+      <View style={styles.listContent}>
+        {latestAssociations.map((item) => (
           <TouchableOpacity
+            key={item.id.toString()}
             style={[
               styles.badgeCard,
               {
@@ -141,9 +128,7 @@ const LatestAssociations = () => {
               handlePress(item.id)
             }
           >
-
             {/* IMAGE */}
-
             <Image
               source={{
                 uri:
@@ -154,9 +139,7 @@ const LatestAssociations = () => {
             />
 
             {/* INFO */}
-
             <View style={styles.info}>
-
               <Text
                 style={[
                   styles.name,
@@ -178,21 +161,16 @@ const LatestAssociations = () => {
               </Text>
 
               {/* BOTTOM */}
-
               <View style={styles.bottomRow}>
-
                 {/* CITY */}
-
                 <View
                   style={styles.cityContainer}
                 >
-
                   <Ionicons
                     name="location-outline"
                     size={13}
                     color={colors.muted}
                   />
-
                   <Text
                     style={[
                       styles.city,
@@ -202,11 +180,9 @@ const LatestAssociations = () => {
                   >
                     {item.city}
                   </Text>
-
                 </View>
 
                 {/* RATING */}
-
                 <View
                   style={[
                     styles.ratingContainer,
@@ -216,13 +192,11 @@ const LatestAssociations = () => {
                     },
                   ]}
                 >
-
                   <Ionicons
                     name="star"
                     size={13}
                     color="#FFD700"
                   />
-
                   <Text
                     style={[
                       styles.rating,
@@ -235,27 +209,19 @@ const LatestAssociations = () => {
                   >
                     4.5
                   </Text>
-
                 </View>
-
               </View>
-
             </View>
-
           </TouchableOpacity>
-
-        )}
-      />
-
+        ))}
+      </View>
     </View>
-
   );
 };
 
 export default LatestAssociations;
 
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
     marginTop: 20,
@@ -272,6 +238,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginVertical: 20,
     fontSize: 14,
+  },
+
+  /* ================================
+     LIST CONTENT (NUEVO)
+  ================================ */
+
+  listContent: {
+    flex: 1,
   },
 
   /* ================================
@@ -349,5 +323,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-
 });

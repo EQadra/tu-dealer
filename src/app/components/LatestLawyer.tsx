@@ -1,16 +1,16 @@
-import React, { useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useLawyers } from "../../context/LawyerContext";
+import SearchLawyerModal from "./SearchLawyerModal";
 
 /* ================================
    DARK MODE
@@ -21,6 +21,7 @@ import { useDarkMode } from "../../context/app/DarkModeContext";
 const LatestLawyer = () => {
 
   const router = useRouter();
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
   const {
     latestLawyers,
@@ -73,14 +74,45 @@ const LatestLawyer = () => {
 
   if (!latestLawyers?.length) {
     return (
-      <Text
+      <View
         style={[
-          styles.emptyText,
-          { color: colors.muted },
+          styles.container,
+          { backgroundColor: colors.background }
         ]}
       >
-        No hay abogados disponibles
-      </Text>
+        {/* Header con botón de búsqueda */}
+        <View style={styles.headerRow}>
+          <Text
+            style={[
+              styles.title,
+              { color: colors.text },
+            ]}
+          >
+            Abogados recientes
+          </Text>
+          <TouchableOpacity
+            onPress={() => setSearchModalVisible(true)}
+            style={styles.searchButton}
+          >
+            <Ionicons name="search-outline" size={24} color={colors.green} />
+          </TouchableOpacity>
+        </View>
+
+        <Text
+          style={[
+            styles.emptyText,
+            { color: colors.muted },
+          ]}
+        >
+          No hay abogados disponibles
+        </Text>
+
+        {/* Modal de búsqueda */}
+        <SearchLawyerModal
+          visible={searchModalVisible}
+          onClose={() => setSearchModalVisible(false)}
+        />
+      </View>
     );
   }
 
@@ -95,27 +127,29 @@ const LatestLawyer = () => {
       ]}
     >
 
-      <Text
-        style={[
-          styles.title,
-          { color: colors.text },
-        ]}
-      >
-        Abogados recientes
-      </Text>
+      {/* Header con botón de búsqueda */}
+      <View style={styles.headerRow}>
+        <Text
+          style={[
+            styles.title,
+            { color: colors.text },
+          ]}
+        >
+          Abogados recientes
+        </Text>
+        <TouchableOpacity
+          onPress={() => setSearchModalVisible(true)}
+          style={styles.searchButton}
+        >
+          <Ionicons name="search-outline" size={24} color={colors.green} />
+        </TouchableOpacity>
+      </View>
 
-      <FlatList
-        key="vertical-lawyers"
-        data={latestLawyers}
-        keyExtractor={(item) =>
-          item.id.toString()
-        }
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-
-        renderItem={({ item }) => (
-
+      {/* LISTA DE ABOGADOS - View + map en lugar de FlatList */}
+      <View style={styles.listContent}>
+        {latestLawyers.map((item) => (
           <TouchableOpacity
+            key={item.id.toString()}
             style={[
               styles.badgeCard,
               {
@@ -130,9 +164,7 @@ const LatestLawyer = () => {
               )
             }
           >
-
             {/* IMAGE */}
-
             <Image
               source={{
                 uri:
@@ -143,9 +175,7 @@ const LatestLawyer = () => {
             />
 
             {/* INFO */}
-
             <View style={styles.info}>
-
               <Text
                 style={[
                   styles.name,
@@ -168,21 +198,16 @@ const LatestLawyer = () => {
               </Text>
 
               {/* BOTTOM */}
-
               <View style={styles.bottomRow}>
-
                 {/* CITY */}
-
                 <View
                   style={styles.cityContainer}
                 >
-
                   <Ionicons
                     name="location-outline"
                     size={13}
                     color={colors.muted}
                   />
-
                   <Text
                     style={[
                       styles.city,
@@ -192,11 +217,9 @@ const LatestLawyer = () => {
                   >
                     {item.city}
                   </Text>
-
                 </View>
 
                 {/* SERVICES */}
-
                 <View
                   style={[
                     styles.servicesContainer,
@@ -206,13 +229,11 @@ const LatestLawyer = () => {
                     },
                   ]}
                 >
-
                   <Ionicons
                     name="document-text-outline"
                     size={13}
                     color={colors.green}
                   />
-
                   <Text
                     style={[
                       styles.services,
@@ -221,16 +242,17 @@ const LatestLawyer = () => {
                   >
                     {item.services?.length ?? 0}
                   </Text>
-
                 </View>
-
               </View>
-
             </View>
-
           </TouchableOpacity>
+        ))}
+      </View>
 
-        )}
+      {/* Modal de búsqueda */}
+      <SearchLawyerModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
       />
 
     </View>
@@ -247,15 +269,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
+  /* ================================
+     HEADER
+  ================================ */
+
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
   title: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 14,
+  },
+
+  searchButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "transparent",
   },
 
   emptyText: {
     textAlign: "center",
     marginTop: 20,
+  },
+
+  /* ================================
+     LIST CONTENT (NUEVO)
+  ================================ */
+
+  listContent: {
+    flex: 1,
   },
 
   /* ================================

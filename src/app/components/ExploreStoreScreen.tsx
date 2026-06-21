@@ -6,9 +6,9 @@ import React, {
 
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -105,73 +105,96 @@ const ExploreStoreScreen = () => {
   };
 
   /* ================================
-     PRODUCT CARD
+     RENDER PRODUCTS GRID CON VIEW + MAP
   ================================= */
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.productCard,
-        {
-          backgroundColor: colors.card,
-        },
-      ]}
-      activeOpacity={0.85}
-      onPress={() => openDetail(item)}
-    >
-      <Image
-        source={{
-          uri:
-            item.image ||
-            "https://picsum.photos/200",
-        }}
-        style={styles.productImage}
-      />
+  const renderProductsGrid = (productList: any[], isModal: boolean = false) => {
+    const rows = [];
+    const itemsPerRow = 2;
 
-      <Text
-        style={[
-          styles.badge,
-          {
-            backgroundColor:
-              colors.badgeBackground,
-            color: colors.primary,
-          },
-        ]}
-      >
-        {item.productable?.name ||
-          "Producto"}
-      </Text>
+    for (let i = 0; i < productList.length; i += itemsPerRow) {
+      const rowItems = productList.slice(i, i + itemsPerRow);
+      rows.push(
+        <View key={`row-${i}`} style={styles.row}>
+          {rowItems.map((item) => (
+            <TouchableOpacity
+              key={item.id.toString()}
+              style={[
+                isModal ? styles.modalProductCard : styles.productCard,
+                {
+                  backgroundColor: colors.card,
+                },
+              ]}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (isModal) {
+                  setSelectedSearch(item.name);
+                  setModalVisible(false);
+                  openDetail(item);
+                } else {
+                  openDetail(item);
+                }
+              }}
+            >
+              <Image
+                source={{
+                  uri:
+                    item.image ||
+                    "https://picsum.photos/200",
+                }}
+                style={isModal ? styles.modalProductImage : styles.productImage}
+              />
 
-      <Text
-        style={[
-          styles.productName,
-          { color: colors.text },
-        ]}
-        numberOfLines={2}
-      >
-        {item.name}
-      </Text>
+              <Text
+                style={[
+                  isModal ? styles.modalBadge : styles.badge,
+                  {
+                    backgroundColor:
+                      colors.badgeBackground,
+                    color: colors.primary,
+                  },
+                ]}
+              >
+                {item.productable?.name ||
+                  "Producto"}
+              </Text>
 
-      <Text
-        style={[
-          styles.description,
-          { color: colors.subText },
-        ]}
-        numberOfLines={2}
-      >
-        {item.description}
-      </Text>
+              <Text
+                style={[
+                  isModal ? styles.modalProductName : styles.productName,
+                  { color: colors.text },
+                ]}
+                numberOfLines={2}
+              >
+                {item.name}
+              </Text>
 
-      <Text
-        style={[
-          styles.price,
-          { color: colors.primary },
-        ]}
-      >
-        S/ {item.price}
-      </Text>
-    </TouchableOpacity>
-  );
+              <Text
+                style={[
+                  isModal ? styles.modalDescription : styles.description,
+                  { color: colors.subText },
+                ]}
+                numberOfLines={2}
+              >
+                {item.description}
+              </Text>
+
+              <Text
+                style={[
+                  isModal ? styles.modalProductPrice : styles.price,
+                  { color: colors.primary },
+                ]}
+              >
+                S/ {item.price}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          {rowItems.length === 1 && <View style={styles.emptyCard} />}
+        </View>
+      );
+    }
+    return rows;
+  };
 
   /* ================================
      HEADER
@@ -251,8 +274,10 @@ const ExploreStoreScreen = () => {
         },
       ]}
     >
-      {/* PRODUCTS */}
+      {/* HEADER */}
+      {renderHeader()}
 
+      {/* PRODUCTS - View + map en lugar de FlatList */}
       {loading ? (
         <View style={styles.loader}>
           <ActivityIndicator
@@ -261,31 +286,26 @@ const ExploreStoreScreen = () => {
           />
         </View>
       ) : (
-        <FlatList
-          data={products}
-          renderItem={renderItem}
-          keyExtractor={(item) =>
-            item.id.toString()
-          }
-          numColumns={2}
-          ListHeaderComponent={
-            renderHeader
-          }
-          removeClippedSubviews
-          initialNumToRender={6}
-          maxToRenderPerBatch={8}
-          windowSize={5}
-          columnWrapperStyle={{
-            justifyContent:
-              "space-between",
-          }}
-          showsVerticalScrollIndicator={
-            false
-          }
-          contentContainerStyle={{
-            paddingBottom: 30,
-          }}
-        />
+        <ScrollView
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.productsContainer}
+        >
+          {products.length === 0 ? (
+            <Text
+              style={[
+                styles.emptyText,
+                {
+                  color: colors.subText,
+                },
+              ]}
+            >
+              No hay productos disponibles
+            </Text>
+          ) : (
+            renderProductsGrid(products, false)
+          )}
+        </ScrollView>
       )}
 
       {/* ================================
@@ -309,7 +329,6 @@ const ExploreStoreScreen = () => {
           ]}
         >
           {/* HEADER */}
-
           <View
             style={
               styles.searchModalHeader
@@ -385,132 +404,27 @@ const ExploreStoreScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {/* RESULTS */}
-
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) =>
-              item.id.toString()
-            }
-            numColumns={2}
-            removeClippedSubviews
-            initialNumToRender={6}
-            maxToRenderPerBatch={8}
-            windowSize={5}
-            showsVerticalScrollIndicator={
-              false
-            }
-            columnWrapperStyle={{
-              justifyContent:
-                "space-between",
-            }}
-            contentContainerStyle={{
-              paddingBottom: 30,
-              paddingTop: 10,
-            }}
-            ListEmptyComponent={
+          {/* RESULTS - View + map en lugar de FlatList */}
+          <ScrollView
+            style={styles.scrollContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.searchResultsContainer}
+          >
+            {filteredProducts.length === 0 ? (
               <Text
                 style={[
                   styles.emptyText,
                   {
-                    color:
-                      colors.subText,
+                    color: colors.subText,
                   },
                 ]}
               >
-                No se encontraron
-                productos
+                No se encontraron productos
               </Text>
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.modalProductCard,
-                  {
-                    backgroundColor:
-                      colors.card,
-                  },
-                ]}
-                activeOpacity={0.85}
-                onPress={() => {
-                  setSelectedSearch(
-                    item.name
-                  );
-
-                  setModalVisible(
-                    false
-                  );
-
-                  openDetail(item);
-                }}
-              >
-                <Image
-                  source={{
-                    uri:
-                      item.image ||
-                      "https://picsum.photos/200",
-                  }}
-                  style={
-                    styles.modalProductImage
-                  }
-                />
-
-                <Text
-                  style={[
-                    styles.modalBadge,
-                    {
-                      backgroundColor:
-                        colors.badgeBackground,
-                      color:
-                        colors.primary,
-                    },
-                  ]}
-                >
-                  {item.productable
-                    ?.name ||
-                    "Producto"}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.modalProductName,
-                    {
-                      color:
-                        colors.text,
-                    },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {item.name}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.modalDescription,
-                    {
-                      color:
-                        colors.subText,
-                    },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {item.description}
-                </Text>
-
-                <Text
-                  style={[
-                    styles.modalProductPrice,
-                    {
-                      color:
-                        colors.primary,
-                    },
-                  ]}
-                >
-                  S/ {item.price}
-                </Text>
-              </TouchableOpacity>
+            ) : (
+              renderProductsGrid(filteredProducts, true)
             )}
-          />
+          </ScrollView>
         </SafeAreaView>
       </Modal>
 
@@ -536,7 +450,6 @@ const ExploreStoreScreen = () => {
             ]}
           >
             {/* CLOSE */}
-
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={() =>
@@ -552,26 +465,14 @@ const ExploreStoreScreen = () => {
               />
             </TouchableOpacity>
 
-            <FlatList
-              data={
-                selectedProduct
-                  ? [selectedProduct]
-                  : []
-              }
-              keyExtractor={(
-                item,
-                index
-              ) => index.toString()}
-              showsVerticalScrollIndicator={
-                false
-              }
-              contentContainerStyle={{
-                paddingBottom: 40,
-              }}
-              renderItem={() => (
+            {/* DETAIL CONTENT */}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.detailContent}
+            >
+              {selectedProduct && (
                 <>
                   {/* IMAGE */}
-
                   <Image
                     source={{
                       uri:
@@ -584,7 +485,6 @@ const ExploreStoreScreen = () => {
                   />
 
                   {/* BADGE */}
-
                   <View
                     style={[
                       styles.detailBadge,
@@ -611,7 +511,6 @@ const ExploreStoreScreen = () => {
                   </View>
 
                   {/* NAME */}
-
                   <Text
                     style={[
                       styles.detailName,
@@ -627,7 +526,6 @@ const ExploreStoreScreen = () => {
                   </Text>
 
                   {/* PRICE */}
-
                   <Text
                     style={[
                       styles.detailPrice,
@@ -644,7 +542,6 @@ const ExploreStoreScreen = () => {
                   </Text>
 
                   {/* RATING */}
-
                   <View
                     style={
                       styles.ratingContainer
@@ -670,7 +567,6 @@ const ExploreStoreScreen = () => {
                   </View>
 
                   {/* DESCRIPTION */}
-
                   <Text
                     style={[
                       styles.detailDescription,
@@ -686,7 +582,6 @@ const ExploreStoreScreen = () => {
                   </Text>
 
                   {/* STOCK */}
-
                   <View
                     style={[
                       styles.stockBadge,
@@ -721,7 +616,7 @@ const ExploreStoreScreen = () => {
                   </View>
                 </>
               )}
-            />
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -771,6 +666,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
+  scrollContainer: {
+    flex: 1,
+  },
+
   loader: {
     flex: 1,
     justifyContent: "center",
@@ -799,11 +698,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  productsContainer: {
+    paddingBottom: 30,
+  },
+
+  searchResultsContainer: {
+    paddingBottom: 30,
+    paddingTop: 10,
+  },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+
+  emptyCard: {
+    width: "48%",
+  },
+
   productCard: {
     width: "48%",
     padding: 12,
     borderRadius: 18,
-    marginBottom: 14,
 
     shadowColor: "#000",
     shadowOpacity: 0.06,
@@ -939,6 +856,10 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 20,
+  },
+
+  detailContent: {
+    paddingBottom: 40,
   },
 
   closeBtn: {

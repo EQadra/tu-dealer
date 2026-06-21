@@ -1,21 +1,20 @@
-// components/LatestPost.tsx
+// components/LatestPost.tsx - VERSIÓN CON VIEW + MAP
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
-  RefreshControl,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useDarkMode } from "../../context/app/DarkModeContext";
 import { useAuth } from "../../context/AuthContext";
@@ -131,8 +130,9 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
     }
   };
 
-  const renderComment = useCallback(({ item }: { item: any }) => (
-    <View style={[styles.commentBubble, { backgroundColor: colors.comment }]}>
+  // Renderizar comentario individual
+  const renderCommentItem = useCallback((item: any) => (
+    <View key={item.id} style={[styles.commentBubble, { backgroundColor: colors.comment }]}>
       <Text style={[styles.commentUser, { color: colors.text }]}>
         {item.user?.name || "Usuario"}
       </Text>
@@ -145,7 +145,8 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
     </View>
   ), [colors]);
 
-  const renderPostItem = useCallback(({ item }: { item: any }) => {
+  // Renderizar post individual
+  const renderPostItem = useCallback((item: any) => {
     const isLiked = item.liked || false;
     const likeCount = item.likes_count || 0;
     const postableName = item.postable?.first_name
@@ -153,7 +154,7 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
       : item.postable?.name || item.user?.name || "Usuario";
 
     return (
-      <View style={[styles.postItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View key={item.id} style={[styles.postItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.postHeader}>
           <View style={styles.postAvatarContainer}>
             <Text style={[styles.postAvatarText, { color: colors.text }]}>
@@ -247,6 +248,33 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
 
   const displayPosts = posts.slice(0, limit);
 
+  // Renderizar posts con View + map
+  const renderPosts = () => {
+    if (displayPosts.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="people-outline" size={60} color={colors.secondaryText} />
+          <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+            No hay publicaciones
+          </Text>
+        </View>
+      );
+    }
+    return displayPosts.map((item) => renderPostItem(item));
+  };
+
+  // Renderizar comentarios con View + map
+  const renderComments = () => {
+    if (!activePost?.comments || activePost.comments.length === 0) {
+      return (
+        <Text style={[styles.noComments, { color: colors.secondaryText }]}>
+          No hay comentarios aún. ¡Sé el primero!
+        </Text>
+      );
+    }
+    return activePost.comments.map((item: any) => renderCommentItem(item));
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.card }]}>
       {showHeader && (
@@ -260,32 +288,10 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
         </View>
       )}
 
-      <FlatList
-        data={displayPosts}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderPostItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.green}
-            colors={[colors.green]}
-          />
-        }
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="people-outline" size={60} color={colors.secondaryText} />
-            <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-              No hay publicaciones
-            </Text>
-          </View>
-        )}
-        initialNumToRender={5}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-      />
+      {/* Posts - Usando View + map */}
+      <View style={styles.listContent}>
+        {renderPosts()}
+      </View>
 
       {/* Modal de comentarios */}
       <Modal
@@ -321,18 +327,14 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
               </>
             )}
 
-            <FlatList
-              data={activePost?.comments || []}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderComment}
-              contentContainerStyle={styles.commentList}
+            {/* Comentarios - Usando View + map dentro de ScrollView */}
+            <ScrollView
+              style={styles.commentsScrollView}
               showsVerticalScrollIndicator={false}
-              ListEmptyComponent={() => (
-                <Text style={[styles.noComments, { color: colors.secondaryText }]}>
-                  No hay comentarios aún. ¡Sé el primero!
-                </Text>
-              )}
-            />
+              contentContainerStyle={styles.commentList}
+            >
+              {renderComments()}
+            </ScrollView>
 
             <View style={styles.inputRow}>
               <TextInput
@@ -376,7 +378,7 @@ const LatestPost = ({ limit = 15, showHeader = true, onPostPress }: LatestPostPr
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: "100%",
   },
   headerContainer: {
     paddingHorizontal: 16,
@@ -394,6 +396,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+    paddingHorizontal: 16,
   },
   loadingContainer: {
     paddingVertical: 60,
@@ -435,12 +438,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  emptySubtext: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
   postItem: {
-    marginHorizontal: 16,
     marginVertical: 8,
     padding: 14,
     borderRadius: 14,
@@ -577,6 +575,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     lineHeight: 20,
   },
+  commentsScrollView: {
+    maxHeight: 300,
+  },
   commentList: {
     paddingBottom: 8,
   },
@@ -676,75 +677,6 @@ const styles = StyleSheet.create({
   likesText: {
     fontSize: 12,
     fontWeight: "500",
-  },
-  darkModeOverlay: {
-    backgroundColor: "rgba(0,0,0,0.3)",
-  },
-  likeAnimation: {
-    transform: [{ scale: 1.2 }],
-  },
-  toastContainer: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
-    padding: 14,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  toastText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  skeletonContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  skeletonItem: {
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 10,
-    height: 280,
-  },
-  skeletonHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  skeletonAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 12,
-  },
-  skeletonText: {
-    height: 12,
-    borderRadius: 4,
-    marginVertical: 4,
-  },
-  skeletonImage: {
-    height: 180,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  skeletonActions: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingTop: 12,
-  },
-  skeletonAction: {
-    width: 60,
-    height: 20,
-    borderRadius: 4,
   },
 });
 

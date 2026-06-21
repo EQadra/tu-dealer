@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  FlatList,
   ActivityIndicator,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useLocalSearchParams } from "expo-router";
@@ -139,44 +139,44 @@ export default function AssociationDetailScreen() {
           </View>
         );
 
-     case "posts":
-  return (
-    <View style={styles.section}>
-      {association.posts?.length ? (
-        association.posts.map((item: any) => (
-          <View
-            key={item.id}
-            style={styles.card}
-          >
-            {/* POST IMAGE */}
-            <Image
-              source={{
-                uri:
-                  item.image ||
-                  "https://picsum.photos/400",
-              }}
-              style={styles.newsImage}
-            />
+      case "posts":
+        return (
+          <View style={styles.section}>
+            {association.posts?.length ? (
+              association.posts.map((item: any) => (
+                <View
+                  key={item.id}
+                  style={styles.card}
+                >
+                  {/* POST IMAGE */}
+                  <Image
+                    source={{
+                      uri:
+                        item.image ||
+                        "https://picsum.photos/400",
+                    }}
+                    style={styles.newsImage}
+                  />
 
-            {/* POST TITLE */}
-            <Text style={styles.cardTitle}>
-              {item.title}
-            </Text>
+                  {/* POST TITLE */}
+                  <Text style={styles.cardTitle}>
+                    {item.title}
+                  </Text>
 
-            {/* POST CONTENT */}
-            <Text style={styles.cardText}>
-              {item.short_content ||
-                item.content}
-            </Text>
+                  {/* POST CONTENT */}
+                  <Text style={styles.cardText}>
+                    {item.short_content ||
+                      item.content}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>
+                No hay publicaciones disponibles
+              </Text>
+            )}
           </View>
-        ))
-      ) : (
-        <Text style={styles.emptyText}>
-          No hay publicaciones disponibles
-        </Text>
-      )}
-    </View>
-  );
+        );
 
       case "productos":
         return (
@@ -232,87 +232,86 @@ export default function AssociationDetailScreen() {
     }
   };
 
+  /* =========================
+     HEADER COMPONENT
+  ========================= */
+
+  const renderHeader = () => (
+    <>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Image
+          source={{
+            uri:
+              association.image ||
+              "https://picsum.photos/200",
+          }}
+          style={styles.image}
+        />
+
+        <Text style={styles.name}>
+          {association.name}
+        </Text>
+
+        <Text style={styles.city}>
+          📍 {association.city}
+        </Text>
+      </View>
+
+      {/* RATING */}
+      <View style={styles.ratingContainer}>
+        <View style={styles.ratingBox}>
+          <Text style={styles.rating}>
+            ⭐ {rating.toFixed(1)}
+          </Text>
+
+          <Text style={styles.reviewText}>
+            {association.feedbacks
+              ?.length || 0}{" "}
+            reviews
+          </Text>
+        </View>
+      </View>
+
+      {/* TABS */}
+      <View style={styles.tabs}>
+        {["perfil", "posts", "productos"].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() =>
+              setActiveTab(tab)
+            }
+            style={[
+              styles.tabButton,
+              activeTab === tab &&
+                styles.activeTab,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab &&
+                  styles.activeTabText,
+              ]}
+            >
+              {tab.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.container}>
-      <FlatList
-        data={[1]}
-        keyExtractor={() => "main"}
+      {/* CONTENIDO - View + map en lugar de FlatList */}
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        renderItem={() => (
-          <View style={{ paddingBottom: 30 }}>
-            {renderTabContent()}
-          </View>
-        )}
-        ListHeaderComponent={
-          <>
-            {/* HEADER */}
-            <View style={styles.header}>
-              <Image
-                source={{
-                  uri:
-                    association.image ||
-                    "https://picsum.photos/200",
-                }}
-                style={styles.image}
-              />
-
-              <Text style={styles.name}>
-                {association.name}
-              </Text>
-
-              <Text style={styles.city}>
-                📍 {association.city}
-              </Text>
-            </View>
-
-            {/* RATING */}
-            <View style={styles.ratingContainer}>
-              <View style={styles.ratingBox}>
-                <Text style={styles.rating}>
-                  ⭐ {rating.toFixed(1)}
-                </Text>
-
-                <Text style={styles.reviewText}>
-                  {association.feedbacks
-                    ?.length || 0}{" "}
-                  reviews
-                </Text>
-              </View>
-            </View>
-
-            {/* TABS */}
-            <View style={styles.tabs}>
-              {[
-                "perfil",
-                "posts",
-                "productos",
-              ].map((tab) => (
-                <TouchableOpacity
-                  key={tab}
-                  onPress={() =>
-                    setActiveTab(tab)
-                  }
-                  style={[
-                    styles.tabButton,
-                    activeTab === tab &&
-                      styles.activeTab,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tabText,
-                      activeTab === tab &&
-                        styles.activeTabText,
-                    ]}
-                  >
-                    {tab.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        }
-      />
+        contentContainerStyle={styles.scrollContent}
+      >
+        {renderHeader()}
+        {renderTabContent()}
+      </ScrollView>
 
       {/* MODAL */}
       <Modal visible={modalVisible} animationType="slide">
@@ -348,6 +347,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  scrollContent: {
+    paddingBottom: 30,
   },
 
   /* =========================

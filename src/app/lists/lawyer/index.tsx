@@ -1,10 +1,10 @@
 import React from "react";
 
 import {
-  FlatList,
-  View,
-  StyleSheet,
+  ScrollView,
   StatusBar,
+  StyleSheet,
+  View,
 } from "react-native";
 
 import ExploreScreen from "../../components/ExploreScreen";
@@ -65,33 +65,33 @@ const LawyerListScreen = () => {
         }
       />
 
-      <FlatList
-        data={sections}
-        keyExtractor={(item) =>
-          item.id
-        }
-        renderItem={({ item }) => (
-
+      {/* CONTENIDO - View + map en lugar de FlatList */}
+      <ScrollView
+        style={[
+          styles.scrollView,
+          {
+            backgroundColor,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.contentContainer,
+          {
+            backgroundColor,
+          },
+        ]}
+      >
+        {sections.map((item) => (
           <View
+            key={item.id}
             style={{
               backgroundColor,
             }}
           >
             {item.component}
           </View>
-
-        )}
-        showsVerticalScrollIndicator={
-          false
-        }
-        style={{
-          backgroundColor,
-        }}
-        contentContainerStyle={{
-          paddingBottom: 40,
-          backgroundColor,
-        }}
-      />
+        ))}
+      </ScrollView>
 
     </View>
 
@@ -105,6 +105,14 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
+  },
+
+  scrollView: {
+    flex: 1,
+  },
+
+  contentContainer: {
+    paddingBottom: 40,
   },
 
 });

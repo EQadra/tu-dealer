@@ -86,7 +86,7 @@ function AppContent() {
         <Stack.Screen name="auth/auth-intro" />
 
         {/* CONFIG ALL */}
-        <Stack.Screen name="config/all/asociation" />
+        <Stack.Screen name="config/all/association" />
         <Stack.Screen name="config/all/doctor" />
         <Stack.Screen name="config/all/lawyer" />
         <Stack.Screen name="config/all/store" />

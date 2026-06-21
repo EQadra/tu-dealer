@@ -1,15 +1,27 @@
-import React, { createContext, ReactNode, useContext, useState } from "react";
+import React, {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useState,
+} from "react";
 import { CreateDoctorPayload } from "../types/createDoctor";
 import { Doctor } from "../types/doctor";
 import api from "../utils/axios";
 
 interface DoctorContextProps {
+  // Estados principales
   doctors: Doctor[];
   latestDoctors: Doctor[];
   doctor: Doctor | null;
   loading: boolean;
   error: string | null;
+  
+  // Estados de búsqueda
+  searchResults: Doctor[];
+  searching: boolean;
 
+  // Métodos CRUD
   fetchDoctors: () => Promise<void>;
   fetchLatestDoctors: () => Promise<void>;
   fetchDoctorById: (id: number) => Promise<void>;
@@ -17,17 +29,25 @@ interface DoctorContextProps {
   createDoctor: (data: CreateDoctorPayload) => Promise<Doctor>;
   updateDoctor: (id: number, data: Partial<CreateDoctorPayload>) => Promise<Doctor>;
   deleteDoctor: (id: number) => Promise<void>;
+  
+  // Métodos de búsqueda
+  searchDoctors: (query: string) => Promise<Doctor[]>;
+  clearSearch: () => void;
 }
 
 const DoctorContext = createContext<DoctorContextProps>({} as DoctorContextProps);
 
 export const DoctorProvider = ({ children }: { children: ReactNode }) => {
-  // ✅ ESTADOS CORRECTOS
+  // Estados principales
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [latestDoctors, setLatestDoctors] = useState<Doctor[]>([]);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estados de búsqueda
+  const [searchResults, setSearchResults] = useState<Doctor[]>([]);
+  const [searching, setSearching] = useState(false);
 
   /* ================================
      GET /doctors
@@ -104,6 +124,9 @@ export const DoctorProvider = ({ children }: { children: ReactNode }) => {
       const newDoctor = res.data.data ?? res.data;
       setDoctors((prev) => [newDoctor, ...prev]);
       return newDoctor;
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al crear doctor");
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -112,32 +135,32 @@ export const DoctorProvider = ({ children }: { children: ReactNode }) => {
   /* ================================
      PUT /doctors/{id}
   ================================ */
-const updateDoctor = async (
-    id: number,  // ✅ Este es el ID que debes usar
+  const updateDoctor = async (
+    id: number,
     data: Partial<CreateDoctorPayload>
-): Promise<Doctor> => {
+  ): Promise<Doctor> => {
     setLoading(true);
     setError(null);
     
     try {
-        // ✅ Usar el ID en la URL
-        const res = await axios.put(`/api/doctors/${id}`, data);
-        const updatedDoctor = res.data.data ?? res.data;
+      const res = await api.put(`/doctors/${id}`, data);
+      const updatedDoctor = res.data.data ?? res.data;
 
-        setDoctors((prev) =>
-            prev.map((d) => (d.id === id ? updatedDoctor : d))
-        );
+      setDoctors((prev) =>
+        prev.map((d) => (d.id === id ? updatedDoctor : d))
+      );
 
-        if (doctor?.id === id) setDoctor(updatedDoctor);
+      if (doctor?.id === id) setDoctor(updatedDoctor);
 
-        return updatedDoctor;
-    } catch (error: any) {
-        console.error('❌ Error:', error.response?.data || error.message);
-        throw error;
+      return updatedDoctor;
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al actualizar doctor");
+      throw err;
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
+
   /* ================================
      DELETE /doctors/{id}
   ================================ */
@@ -147,10 +170,66 @@ const updateDoctor = async (
     try {
       await api.delete(`/doctors/${id}`);
       setDoctors((prev) => prev.filter((d) => d.id !== id));
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al eliminar doctor");
     } finally {
       setLoading(false);
     }
   };
+
+  /* ================================
+     🔍 BÚSQUEDA
+  ================================ */
+
+  /* -----------------------------
+   | GET /doctors/search?q={query}
+   ----------------------------- */
+  const searchDoctors = useCallback(async (query: string): Promise<Doctor[]> => {
+    // Si la consulta está vacía, limpiar resultados
+    if (!query || !query.trim()) {
+      setSearchResults([]);
+      setSearching(false);
+      return [];
+    }
+
+    setSearching(true);
+    setError(null);
+
+    try {
+      const res = await api.get(`/doctors/search?q=${encodeURIComponent(query.trim())}`);
+      const data = res.data || [];
+      setSearchResults(data);
+      
+      console.log(`✅ Encontrados ${data.length} doctores para: "${query}"`);
+      return data;
+    } catch (err: any) {
+      // Manejo específico para 404 (sin resultados)
+      if (err.response?.status === 404) {
+        console.log(`🔍 No se encontraron doctores para: "${query}"`);
+        setSearchResults([]);
+        return [];
+      }
+      
+      // Para otros errores (network, 500, etc.)
+      setError(err.response?.data?.message || "Error al buscar doctores");
+      setSearchResults([]);
+      throw err;
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  /* -----------------------------
+   | CLEAR SEARCH
+   ----------------------------- */
+  const clearSearch = useCallback(() => {
+    setSearchResults([]);
+    setSearching(false);
+  }, []);
+
+  /* ================================
+     PROVIDER
+  ================================ */
 
   return (
     <DoctorContext.Provider
@@ -160,6 +239,8 @@ const updateDoctor = async (
         doctor,
         loading,
         error,
+        searchResults,
+        searching,
         fetchDoctors,
         fetchLatestDoctors,
         fetchDoctorById,
@@ -167,6 +248,8 @@ const updateDoctor = async (
         createDoctor,
         updateDoctor,
         deleteDoctor,
+        searchDoctors,
+        clearSearch,
       }}
     >
       {children}
@@ -174,4 +257,12 @@ const updateDoctor = async (
   );
 };
 
-export const useDoctors = () => useContext(DoctorContext);
+export const useDoctors = () => {
+  const context = useContext(DoctorContext);
+  if (!context) {
+    throw new Error("useDoctors must be used within a DoctorProvider");
+  }
+  return context;
+};
+
+export default DoctorContext;

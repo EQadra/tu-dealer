@@ -1,36 +1,25 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  FlatList,
   ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import { useDoctors } from "../../context/DoctorContext";
-
-/* ================================
-   DARK MODE
-================================ */
-
 import { useDarkMode } from "../../context/app/DarkModeContext";
 
 const LatestDoctors = () => {
-
   const router = useRouter();
-
-  const {
-    latestDoctors,
-    loading,
-    fetchLatestDoctors,
-  } = useDoctors();
-
+  const { latestDoctors, fetchLatestDoctors } = useDoctors();
   const { darkMode } = useDarkMode();
+  
+  const [loading, setLoading] = useState(true);
 
   /* ================================
      COLORS
@@ -52,7 +41,12 @@ const LatestDoctors = () => {
   ================================ */
 
   useEffect(() => {
-    fetchLatestDoctors();
+    const loadDoctors = async () => {
+      setLoading(true);
+      await fetchLatestDoctors();
+      setLoading(false);
+    };
+    loadDoctors();
   }, []);
 
   /* ================================
@@ -73,185 +67,105 @@ const LatestDoctors = () => {
      EMPTY
   ================================ */
 
-  if (!latestDoctors.length) {
+  if (!latestDoctors?.length) {
     return (
-      <Text
-        style={[
-          styles.emptyText,
-          { color: colors.muted },
-        ]}
-      >
-        No hay doctores disponibles
-      </Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Doctores recientes
+        </Text>
+        <Text style={[styles.emptyText, { color: colors.muted }]}>
+          No hay doctores disponibles
+        </Text>
+      </View>
     );
   }
 
+  /* ================================
+     RENDER CON MAP (SIN SCROLL)
+  ================================ */
+
   return (
-
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.background,
-        },
-      ]}
-    >
-
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* TITLE */}
-
-      <Text
-        style={[
-          styles.sectionTitle,
-          { color: colors.text },
-        ]}
-      >
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
         Doctores recientes
       </Text>
 
-      {/* LIST */}
+      {/* 👈 MAP DIRECTO SIN FLATLIST NI SCROLLVIEW */}
+      {latestDoctors.map((item) => (
+        <TouchableOpacity
+          key={item.id.toString()}
+          style={[
+            styles.badgeCard,
+            {
+              backgroundColor: colors.card,
+              shadowColor: colors.shadow,
+            },
+          ]}
+          onPress={() => router.push(`/detail/doctor/${item.id}`)}
+          activeOpacity={0.85}
+        >
+          {/* IMAGE */}
+          <Image
+            source={{
+              uri: item.image || "https://picsum.photos/400",
+            }}
+            style={styles.avatar}
+          />
 
-      <FlatList
-        key="vertical-list"
-        data={latestDoctors}
-        keyExtractor={(item) =>
-          item.id.toString()
-        }
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={false}
+          {/* INFO */}
+          <View style={styles.info}>
+            <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+              Dr. {item.first_name} {item.last_name}
+            </Text>
 
-        renderItem={({ item }) => (
+            <Text style={[styles.specialty, { color: colors.subText }]} numberOfLines={1}>
+              {item.specialty || "Médico General"}
+            </Text>
 
-          <TouchableOpacity
-            style={[
-              styles.badgeCard,
-              {
-                backgroundColor: colors.card,
-                shadowColor: colors.shadow,
-              },
-            ]}
-            onPress={() =>
-              router.push(`/detail/doctor/${item.id}`)
-            }
-            activeOpacity={0.85}
-          >
+            {/* BOTTOM */}
+            <View style={styles.bottomRow}>
+              {/* CITY */}
+              <View style={styles.cityContainer}>
+                <Ionicons name="location-outline" size={13} color={colors.muted} />
+                <Text style={[styles.city, { color: colors.muted }]} numberOfLines={1}>
+                  {item.city || "Ciudad no especificada"}
+                </Text>
+              </View>
 
-            {/* IMAGE */}
-
-            <Image
-              source={{
-                uri:
-                  item.image ||
-                  "https://picsum.photos/400",
-              }}
-              style={styles.avatar}
-            />
-
-            {/* INFO */}
-
-            <View style={styles.info}>
-
-              <Text
+              {/* FEEDBACKS COUNT */}
+              <View
                 style={[
-                  styles.name,
-                  { color: colors.text },
+                  styles.feedbackContainer,
+                  {
+                    backgroundColor: colors.badge,
+                  },
                 ]}
-                numberOfLines={1}
               >
-                Dr. {item.first_name}{" "}
-                {item.last_name}
-              </Text>
-
-              <Text
-                style={[
-                  styles.specialty,
-                  { color: colors.subText },
-                ]}
-                numberOfLines={1}
-              >
-                {item.specialty}
-              </Text>
-
-              {/* BOTTOM */}
-
-              <View style={styles.bottomRow}>
-
-                {/* CITY */}
-
-                <View
-                  style={styles.cityContainer}
-                >
-
-                  <Ionicons
-                    name="location-outline"
-                    size={13}
-                    color={colors.muted}
-                  />
-
-                  <Text
-                    style={[
-                      styles.city,
-                      { color: colors.muted },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {item.city}
-                  </Text>
-
-                </View>
-
-                {/* RATING */}
-
-                <View
+                <Ionicons name="chatbubble-outline" size={13} color={colors.muted} />
+                <Text
                   style={[
-                    styles.ratingContainer,
+                    styles.feedbackCount,
                     {
-                      backgroundColor:
-                        colors.badge,
+                      color: darkMode ? "#FFF" : "#444",
                     },
                   ]}
                 >
-
-                  <Ionicons
-                    name="star"
-                    size={13}
-                    color="#FFD700"
-                  />
-
-                  <Text
-                    style={[
-                      styles.rating,
-                      {
-                        color: darkMode
-                          ? "#FFF"
-                          : "#444",
-                      },
-                    ]}
-                  >
-                    {item.rating}
-                  </Text>
-
-                </View>
-
+                  {item.feedbacks?.length || 0}
+                </Text>
               </View>
-
             </View>
-
-          </TouchableOpacity>
-
-        )}
-      />
-
+          </View>
+        </TouchableOpacity>
+      ))}
     </View>
-
   );
 };
 
 export default LatestDoctors;
 
 const styles = StyleSheet.create({
-
   container: {
-    flex: 1,
     marginTop: 20,
     paddingHorizontal: 10,
   },
@@ -284,6 +198,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 5,
     elevation: 3,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
   },
 
   avatar: {
@@ -327,9 +245,10 @@ const styles = StyleSheet.create({
   city: {
     fontSize: 12,
     marginLeft: 4,
+    flex: 1,
   },
 
-  ratingContainer: {
+  feedbackContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
@@ -337,10 +256,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  rating: {
+  feedbackCount: {
     marginLeft: 4,
     fontSize: 12,
     fontWeight: "700",
   },
-
 });

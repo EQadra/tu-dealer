@@ -1,20 +1,29 @@
 import React, {
   createContext,
+  ReactNode,
+  useCallback,
   useContext,
   useState,
-  ReactNode,
 } from "react";
-import api from "../utils/axios";
-import { Lawyer } from "../types/lawyer";
 import { CreateLawyerPayload } from "../types/createLawyer";
+import { Lawyer } from "../types/lawyer";
+import api from "../utils/axios";
+
+
 
 interface LawyerContextProps {
+  // Estados principales
   lawyers: Lawyer[];
   latestLawyers: Lawyer[];
   lawyer: Lawyer | null;
   loading: boolean;
   error: string | null;
+  
+  // Estados de búsqueda (NUEVOS)
+  searchResults: Lawyer[];
+  searching: boolean;
 
+  // Métodos CRUD
   fetchLawyers: () => Promise<void>;
   fetchLatestLawyers: () => Promise<void>;
   fetchLawyerById: (id: number) => Promise<void>;
@@ -25,6 +34,10 @@ interface LawyerContextProps {
   ) => Promise<Lawyer>;
   deleteLawyer: (id: number) => Promise<void>;
   fetchMyLawyer: () => Promise<void>;
+  
+  // Métodos de búsqueda (NUEVOS)
+  searchLaawyers: (query: string) => Promise<Lawyer[]>;
+  clearSearch: () => void;
 }
 
 const LawyerContext = createContext<LawyerContextProps>(
@@ -32,11 +45,16 @@ const LawyerContext = createContext<LawyerContextProps>(
 );
 
 export const LawyerProvider = ({ children }: { children: ReactNode }) => {
+  // Estados principales
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [latestLawyers, setLatestLawyers] = useState<Lawyer[]>([]);
   const [lawyer, setLawyer] = useState<Lawyer | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estados de búsqueda (NUEVOS)
+  const [searchResults, setSearchResults] = useState<Lawyer[]>([]);
+  const [searching, setSearching] = useState(false);
 
   /* -----------------------------
    | GET /lawyers
@@ -179,14 +197,77 @@ export const LawyerProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  /* ================================
+     MÉTODOS DE BÚSQUEDA (NUEVOS)
+  ================================ */
+
+  /* -----------------------------
+   | GET /lawyers/search?q={query}
+   ----------------------------- */
+ const searchLawyers = useCallback(async (query: string): Promise<Lawyer[]> => {
+    // Si la consulta está vacía, limpiar resultados
+    if (!query || !query.trim()) {
+      setSearchResults([]);
+      setSearching(false);
+      return [];
+    }
+
+    setSearching(true);
+    setError(null);
+
+    try {
+      const res = await api.get(`/lawyers/search?q=${encodeURIComponent(query.trim())}`);
+      const data = res.data || [];
+      setSearchResults(data);
+      return data;
+    } catch (err: any) {
+      // 🔥 MANEJO ESPECÍFICO PARA 404 (sin resultados)
+      if (err.response?.status === 404) {
+        console.log(`🔍 No se encontraron abogados para: "${query}"`);
+        setSearchResults([]); // Array vacío en lugar de error
+        return []; // Retornar array vacío
+      }
+      
+      // Para otros errores (network, 500, etc.)
+      setError(err.response?.data?.message || "Error al buscar abogados");
+      setSearchResults([]);
+      throw err; // Solo lanzar errores que no son 404
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  /* -----------------------------
+   | CLEAR SEARCH
+   ----------------------------- */
+  const clearSearch = useCallback(() => {
+    setSearchResults([]);
+    setSearching(false);
+  }, []);
+
+  /* -----------------------------
+   | GET /lawyers/search?q={query}
+   ----------------------------- */
+
+  /* ================================
+     PROVIDER CON TODOS LOS VALORES
+  ================================ */
+
   return (
     <LawyerContext.Provider
       value={{
+        // Estados principales
         lawyers,
         latestLawyers,
         lawyer,
         loading,
         error,
+        
+        // Estados de búsqueda (NUEVOS)
+        searchResults,
+        searching,
+        
+        // Métodos CRUD
         fetchLawyers,
         fetchLatestLawyers,
         fetchLawyerById,
@@ -194,6 +275,10 @@ export const LawyerProvider = ({ children }: { children: ReactNode }) => {
         updateLawyer,
         fetchMyLawyer,
         deleteLawyer,
+        
+        // Métodos de búsqueda (NUEVOS)
+        searchLawyers,
+        clearSearch,
       }}
     >
       {children}
@@ -201,4 +286,12 @@ export const LawyerProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useLawyers = () => useContext(LawyerContext);
+export const useLawyers = () => {
+  const context = useContext(LawyerContext);
+  if (!context) {
+    throw new Error("useLawyers must be used within a LawyerProvider");
+  }
+  return context;
+};
+
+export default LawyerContext;

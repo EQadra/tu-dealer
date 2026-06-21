@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
   Image,
-  ScrollView,
-  TouchableOpacity,
   Modal,
+  ScrollView,
   StyleSheet,
-  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useLocalSearchParams } from "expo-router";
@@ -199,7 +198,7 @@ export default function LawyerDetailScreen() {
           </View>
         )}
 
-        {/* POSTS */}
+        {/* POSTS - View + map */}
         {activeTab ===
           "posts" && (
           <View>
@@ -237,7 +236,7 @@ export default function LawyerDetailScreen() {
           </View>
         )}
 
-        {/* FEEDBACKS */}
+        {/* FEEDBACKS - View + map */}
         {activeTab ===
           "feedbacks" && (
           <View>
@@ -275,7 +274,7 @@ export default function LawyerDetailScreen() {
           </View>
         )}
 
-        {/* SERVICES */}
+        {/* SERVICES - View + map */}
         {activeTab ===
           "services" && (
           <View style={styles.card}>
@@ -349,7 +348,7 @@ export default function LawyerDetailScreen() {
         )}
       </ScrollView>
 
-      {/* MODAL */}
+      {/* MODAL - View + map en lugar de FlatList */}
       <Modal
         visible={modalVisible}
         transparent
@@ -361,20 +360,10 @@ export default function LawyerDetailScreen() {
               styles.modalContent
             }
           >
-            <FlatList
-              data={
-                lawyer.services ||
-                []
-              }
-              keyExtractor={(
-                item
-              ) =>
-                item.id.toString()
-              }
-              renderItem={({
-                item,
-              }) => (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {lawyer.services?.map((item) => (
                 <View
+                  key={item.id}
                   style={
                     styles.serviceCard
                   }
@@ -412,8 +401,8 @@ export default function LawyerDetailScreen() {
                     )}
                   </Text>
                 </View>
-              )}
-            />
+              ))}
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.btn}
@@ -437,6 +426,7 @@ export default function LawyerDetailScreen() {
     </View>
   );
 }
+
 /* ESTILOS (los tuyos están bien, no los toqué) */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F7F9" },

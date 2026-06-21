@@ -8,18 +8,17 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
-  RefreshControl,
+  ScrollView, // 👈 Solo para el modal
   Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -150,7 +149,7 @@ const LatestNews = () => {
   }, [likedNews]);
 
   // ============================
-  // REFRESH
+  // REFRESH - AHORA SOLO ACTUALIZA, NO USA REFRESHCONTROL
   // ============================
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -207,7 +206,6 @@ const LatestNews = () => {
     try {
       const newComment = await addComment(activeNews.id, commentText.trim());
 
-      // Actualizar el estado local del modal
       setActiveNews((prev: NewsItem | null) => {
         if (!prev) return null;
         return {
@@ -226,48 +224,14 @@ const LatestNews = () => {
   }, [commentText, activeNews, addComment]);
 
   // ============================
-  // RENDER COMMENT
-  // ============================
-  const renderComment = useCallback(
-    ({ item }: { item: Comment }) => (
-      <View
-        style={[
-          styles.commentBubble,
-          { backgroundColor: colors.comment },
-        ]}
-      >
-        <Text style={[styles.commentUser, { color: colors.text }]}>
-          {item.user?.name || "Usuario"}
-        </Text>
-
-        <Text style={[styles.commentText, { color: colors.text }]}>
-          {item.content}
-        </Text>
-
-        <Text
-          style={[
-            styles.commentDate,
-            { color: colors.secondaryText },
-          ]}
-        >
-          {new Date(item.created_at).toLocaleString()}
-        </Text>
-      </View>
-    ),
-    [colors]
-  );
-
-  // ============================
   // RENDER NEWS ITEM
   // ============================
   const renderNewsItem = useCallback(
-    ({ item }: { item: NewsItem }) => {
-      // Obtener nombre del perfil (newable)
+    (item: NewsItem) => {
       const profileName = item.newable?.first_name
         ? `${item.newable.first_name} ${item.newable.last_name || ""}`
         : item.newable?.name || "Perfil";
 
-      // Obtener fecha formateada
       const formattedDate = new Date(item.created_at).toLocaleDateString(
         "es-ES",
         {
@@ -279,6 +243,7 @@ const LatestNews = () => {
 
       return (
         <View
+          key={item.id}
           style={[
             styles.newsItem,
             {
@@ -287,7 +252,6 @@ const LatestNews = () => {
             },
           ]}
         >
-          {/* Imagen */}
           <Image
             source={{
               uri: item.url || "https://picsum.photos/seed/" + item.id + "/400/200",
@@ -296,7 +260,6 @@ const LatestNews = () => {
             resizeMode="cover"
           />
 
-          {/* Header con avatar y nombre */}
           <View style={styles.newsHeader}>
             <View style={styles.newsAvatarContainer}>
               <Text style={[styles.newsAvatarText, { color: colors.text }]}>
@@ -314,7 +277,6 @@ const LatestNews = () => {
             </View>
           </View>
 
-          {/* Título y descripción */}
           <Text style={[styles.newsTitle, { color: colors.text }]}>
             {item.titulo}
           </Text>
@@ -329,14 +291,12 @@ const LatestNews = () => {
             {item.descripcion}
           </Text>
 
-          {/* ACCIONES */}
           <View
             style={[
               styles.newsActions,
               { borderTopColor: colors.border },
             ]}
           >
-            {/* Compartir */}
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleShare(item)}
@@ -351,7 +311,6 @@ const LatestNews = () => {
               </Text>
             </TouchableOpacity>
 
-            {/* Comentar */}
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => openComments(item)}
@@ -366,7 +325,6 @@ const LatestNews = () => {
               </Text>
             </TouchableOpacity>
 
-            {/* Me gusta */}
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleLike(item.id)}
@@ -455,7 +413,7 @@ const LatestNews = () => {
   }
 
   // ============================
-  // RENDER PRINCIPAL
+  // RENDER PRINCIPAL - SIN SCROLLVIEW EXTERNO
   // ============================
   return (
     <View style={[styles.container, { backgroundColor: colors.card }]}>
@@ -463,27 +421,16 @@ const LatestNews = () => {
         📰 Noticias de mi rol
       </Text>
 
-      <FlatList
-        data={latestNews}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderNewsItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.green}
-            colors={[colors.green]}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-        initialNumToRender={5}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-      />
+      {/* 👈 ELIMINADO ScrollView externo - Ahora solo el contenido con map() */}
+      <View style={styles.listContent}>
+        {latestNews.length === 0 ? (
+          renderEmptyState()
+        ) : (
+          latestNews.map((item) => renderNewsItem(item))
+        )}
+      </View>
 
-      {/* MODAL DE COMENTARIOS */}
+      {/* MODAL DE COMENTARIOS - ScrollView solo aquí dentro del modal */}
       <Modal
         visible={modalVisible}
         animationType="fade"
@@ -495,7 +442,6 @@ const LatestNews = () => {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={[styles.modalContainer, { backgroundColor: colors.modal }]}
           >
-            {/* Header del modal */}
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 💬 Comentarios
@@ -505,28 +451,50 @@ const LatestNews = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Título de la noticia en el modal */}
             {activeNews && (
               <Text style={[styles.modalNewsTitle, { color: colors.text }]}>
                 {activeNews.titulo}
               </Text>
             )}
 
-            {/* Lista de comentarios */}
-            <FlatList
-              data={activeNews?.comments || []}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderComment}
-              contentContainerStyle={styles.commentList}
+            {/* ScrollView para comentarios - esto está bien porque está dentro del modal */}
+            <ScrollView
+              style={styles.commentsScrollView}
               showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
+              contentContainerStyle={styles.commentList}
+            >
+              {activeNews?.comments && activeNews.comments.length > 0 ? (
+                activeNews.comments.map((item) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.commentBubble,
+                      { backgroundColor: colors.comment },
+                    ]}
+                  >
+                    <Text style={[styles.commentUser, { color: colors.text }]}>
+                      {item.user?.name || "Usuario"}
+                    </Text>
+                    <Text style={[styles.commentText, { color: colors.text }]}>
+                      {item.content}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.commentDate,
+                        { color: colors.secondaryText },
+                      ]}
+                    >
+                      {new Date(item.created_at).toLocaleString()}
+                    </Text>
+                  </View>
+                ))
+              ) : (
                 <Text style={[styles.noComments, { color: colors.secondaryText }]}>
                   No hay comentarios aún. ¡Sé el primero!
                 </Text>
-              }
-            />
+              )}
+            </ScrollView>
 
-            {/* Input para comentar */}
             <View style={styles.inputRow}>
               <TextInput
                 style={[
@@ -573,7 +541,7 @@ const LatestNews = () => {
 // ============================
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: "100%", // 👈 Importante: flex:1 para que ocupe espacio
     paddingTop: 10,
   },
 
@@ -586,6 +554,7 @@ const styles = StyleSheet.create({
 
   listContent: {
     paddingBottom: 20,
+    paddingHorizontal: 16,
   },
 
   loadingContainer: {
@@ -593,6 +562,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
+    paddingVertical: 40,
   },
 
   loadingText: {
@@ -605,6 +575,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 30,
     gap: 12,
+    paddingVertical: 40,
   },
 
   errorText: {
@@ -646,11 +617,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ============================
-  // NEWS ITEM
-  // ============================
   newsItem: {
-    marginHorizontal: 16,
     marginVertical: 8,
     padding: 12,
     borderRadius: 14,
@@ -738,9 +705,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // ============================
-  // MODAL
-  // ============================
   modalBackdrop: {
     flex: 1,
     justifyContent: "center",
@@ -773,6 +737,10 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 
+  commentsScrollView: {
+    maxHeight: 300,
+  },
+
   commentList: {
     paddingBottom: 8,
   },
@@ -783,9 +751,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // ============================
-  // COMENTARIOS
-  // ============================
   commentBubble: {
     padding: 12,
     borderRadius: 12,
@@ -809,9 +774,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
 
-  // ============================
-  // INPUT
-  // ============================
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",

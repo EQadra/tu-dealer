@@ -1,15 +1,15 @@
 import React from "react";
-import { FlatList } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import ExploreScreen from "../../components/ExploreScreen";
-import LatestAssociations from "../../components/LatestAssociations";
-import LatestDoctors from "../../components/LatestDoctor";
-import LatestLawyer from "../../components/LatestLawyer";
+// import LatestAssociations from "../../components/LatestAssociations";
+// import LatestDoctors from "../../components/LatestDoctor";
+// import LatestLawyer from "../../components/LatestLawyer";
 import LatestNews from "../../components/LatestNews";
 import LatestShops from "../../components/LatestShops";
 
 const StoreListScreen = () => {
 
- const sections = [   
+  const sections = [   
     {
       id: "shops",
       component: <LatestShops />,
@@ -20,18 +20,32 @@ const StoreListScreen = () => {
     },
     {
       id: "LatesNews",
-      component: <LatestNews  />,
+      component: <LatestNews />,
     },
   ];
 
   return (
-    <FlatList
-      data={sections}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => item.component}
+    <ScrollView
+      style={styles.container}
       showsVerticalScrollIndicator={false}
-    />
+      contentContainerStyle={styles.contentContainer}
+    >
+      {sections.map((item) => (
+        <View key={item.id}>
+          {item.component}
+        </View>
+      ))}
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 40,
+  },
+});
 
 export default StoreListScreen;

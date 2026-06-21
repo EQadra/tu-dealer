@@ -6,7 +6,6 @@ import {
   FlatList,
   Image,
   Modal,
-  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -490,6 +489,101 @@ export default function DoctorScreen() {
   };
 
   // =========================================================
+  // RENDER POSTS LIST - CORREGIDO
+  // =========================================================
+  const renderPostsList = () => {
+    if (loadingMyPosts) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={colors.green} />
+        </View>
+      );
+    }
+
+    if (myPosts && myPosts.length > 0) {
+      return myPosts.map((item) => (
+        <React.Fragment key={item.id.toString()}>
+          {renderPost({ item })}
+        </React.Fragment>
+      ));
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="newspaper-outline" size={50} color={colors.secondaryText} />
+        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+          No tienes posts aún
+        </Text>
+      </View>
+    );
+  };
+
+  // =========================================================
+  // RENDER SERVICES LIST - CORREGIDO
+  // =========================================================
+  const renderServicesList = () => {
+    if (servicesLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={colors.green} />
+        </View>
+      );
+    }
+
+    if (services && services.length > 0) {
+      return services.map((s: any) => (
+        <View
+          key={s.id}
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              {s.name}
+            </Text>
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingService(s);
+                  setServiceName(s.name);
+                  setServiceDescription(s.description || "");
+                  setServicePrice(s.price?.toString() || "");
+                  setServiceDuration(s.duration?.toString() || "");
+                  setServiceModalVisible(true);
+                }}
+              >
+                <Ionicons name="pencil" size={20} color={colors.green} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteService(s.id)}>
+                <Ionicons name="trash" size={20} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Text style={[styles.cardDescription, { color: colors.secondaryText }]}>
+            {s.description}
+          </Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.price}>${s.price}</Text>
+            {s.duration && (
+              <Text style={[styles.duration, { color: colors.secondaryText }]}>
+                ⏱ {s.duration} min
+              </Text>
+            )}
+          </View>
+        </View>
+      ));
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <Ionicons name="medical-outline" size={50} color={colors.secondaryText} />
+        <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+          No tienes servicios aún
+        </Text>
+      </View>
+    );
+  };
+
+  // =========================================================
   // LOADING
   // =========================================================
   if (!doctor) {
@@ -504,7 +598,7 @@ export default function DoctorScreen() {
   }
 
   // =========================================================
-  // RENDER PRINCIPAL CON FLATLIST PARA SCROLL
+  // RENDER PRINCIPAL CON SCROLLVIEW
   // =========================================================
   const renderContent = () => {
     if (tab === "perfil") {
@@ -591,57 +685,7 @@ export default function DoctorScreen() {
             </Text>
           </TouchableOpacity>
 
-          {servicesLoading ? (
-            <ActivityIndicator size="small" color={colors.green} />
-          ) : services && services.length > 0 ? (
-            services.map((s: any) => (
-              <View
-                key={s.id}
-                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>
-                    {s.name}
-                  </Text>
-                  <View style={styles.cardActions}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setEditingService(s);
-                        setServiceName(s.name);
-                        setServiceDescription(s.description || "");
-                        setServicePrice(s.price?.toString() || "");
-                        setServiceDuration(s.duration?.toString() || "");
-                        setServiceModalVisible(true);
-                      }}
-                    >
-                      <Ionicons name="pencil" size={20} color={colors.green} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteService(s.id)}>
-                      <Ionicons name="trash" size={20} color={colors.danger} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <Text style={[styles.cardDescription, { color: colors.secondaryText }]}>
-                  {s.description}
-                </Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.price}>${s.price}</Text>
-                  {s.duration && (
-                    <Text style={[styles.duration, { color: colors.secondaryText }]}>
-                      ⏱ {s.duration} min
-                    </Text>
-                  )}
-                </View>
-              </View>
-            ))
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="medical-outline" size={50} color={colors.secondaryText} />
-              <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                No tienes servicios aún
-              </Text>
-            </View>
-          )}
+          {renderServicesList()}
         </View>
       );
     }
@@ -665,104 +709,70 @@ export default function DoctorScreen() {
             </Text>
           </TouchableOpacity>
 
-          {loadingMyPosts ? (
-            <ActivityIndicator size="small" color={colors.green} />
-          ) : myPosts && myPosts.length > 0 ? (
-            <FlatList
-              data={myPosts}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderPost}
-              scrollEnabled={false}
-            />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="newspaper-outline" size={50} color={colors.secondaryText} />
-              <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                No tienes posts aún
-              </Text>
-            </View>
-          )}
+          {renderPostsList()}
         </View>
       );
     }
   };
 
   // =========================================================
-  // RENDER PRINCIPAL CON FLATLIST
+  // RENDER PRINCIPAL CON SCROLLVIEW (REEMPLAZANDO FLATLIST)
   // =========================================================
-  const data = [{ key: "content" }];
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FlatList
-        data={data}
-        keyExtractor={(item) => item.key}
-        renderItem={() => (
-          <>
-            {/* =========================================================
-                HEADER
-            ========================================================= */}
-            <View style={styles.header}>
-              <Image
-                source={{
-                  uri: doctor.image || "https://picsum.photos/seed/doctor/200",
-                }}
-                style={styles.avatar}
-              />
-              <Text style={[styles.name, { color: colors.text }]}>
-                {doctor.first_name} {doctor.last_name}
-              </Text>
-              <Text style={[styles.sub, { color: colors.secondaryText }]}>
-                {doctor.specialty || "Especialidad no especificada"}
-              </Text>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={16} color="#F59E0B" />
-                <Text style={[styles.ratingText, { color: colors.secondaryText }]}>
-                  {doctor?.rating || 0} / 5
-                </Text>
-              </View>
-            </View>
-
-            {/* =========================================================
-                TABS
-            ========================================================= */}
-            <View style={styles.tabs}>
-              {["perfil", "services", "posts"].map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  onPress={() => setTab(t)}
-                  style={styles.tabButton}
-                >
-                  <Text
-                    style={
-                      tab === t
-                        ? [styles.activeTab, { color: "#22c55e" }]
-                        : [styles.tab, { color: colors.secondaryText }]
-                    }
-                  >
-                    {t === "perfil" ? "Perfil" : t === "services" ? "Servicios" : "Posts"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* =========================================================
-                CONTENIDO SEGÚN TAB
-            ========================================================= */}
-            {renderContent()}
-          </>
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#22c55e"
-            colors={["#22c55e"]}
+      <View style={styles.scrollContainer}>
+        {/* =========================================================
+            HEADER
+        ========================================================= */}
+        <View style={styles.header}>
+          <Image
+            source={{
+              uri: doctor.image || "https://picsum.photos/seed/doctor/200",
+            }}
+            style={styles.avatar}
           />
-        }
-        contentContainerStyle={styles.flatListContent}
-        showsVerticalScrollIndicator={false}
-      />
+          <Text style={[styles.name, { color: colors.text }]}>
+            {doctor.first_name} {doctor.last_name}
+          </Text>
+          <Text style={[styles.sub, { color: colors.secondaryText }]}>
+            {doctor.specialty || "Especialidad no especificada"}
+          </Text>
+          <View style={styles.ratingContainer}>
+            <Ionicons name="star" size={16} color="#F59E0B" />
+            <Text style={[styles.ratingText, { color: colors.secondaryText }]}>
+              {doctor?.rating || 0} / 5
+            </Text>
+          </View>
+        </View>
+
+        {/* =========================================================
+            TABS
+        ========================================================= */}
+        <View style={styles.tabs}>
+          {["perfil", "services", "posts"].map((t) => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
+              style={styles.tabButton}
+            >
+              <Text
+                style={
+                  tab === t
+                    ? [styles.activeTab, { color: "#22c55e" }]
+                    : [styles.tab, { color: colors.secondaryText }]
+                }
+              >
+                {t === "perfil" ? "Perfil" : t === "services" ? "Servicios" : "Posts"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* =========================================================
+            CONTENIDO SEGÚN TAB
+        ========================================================= */}
+        {renderContent()}
+      </View>
 
       {/* =========================================================
           MODAL PARA SERVICIOS
@@ -914,7 +924,7 @@ export default function DoctorScreen() {
               </Text>
             )}
 
-            {/* Lista de comentarios */}
+            {/* Lista de comentarios - CORREGIDO */}
             <FlatList
               data={localComments}
               keyExtractor={(item) => item.id.toString()}
@@ -926,6 +936,7 @@ export default function DoctorScreen() {
                 </Text>
               }
               style={{ maxHeight: 300 }}
+              showsVerticalScrollIndicator={true}
             />
 
             {/* Input para nuevo comentario */}
@@ -974,14 +985,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  flatListContent: {
-    paddingBottom: 40,
+  scrollContainer: {
+    flex: 1,
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+  },
+  loadingContainer: {
+    paddingVertical: 20,
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 12,
@@ -1061,6 +1076,7 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     padding: 16,
+    paddingBottom: 40,
   },
   addButton: {
     flexDirection: "row",

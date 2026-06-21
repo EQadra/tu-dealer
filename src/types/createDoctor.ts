@@ -1,13 +1,12 @@
+// types/createDoctor.ts
 export interface CreateDoctorPayload {
   first_name: string;
   last_name: string;
   description?: string;
-
-  degree?: string;          // o career
+  career?: string;
   specialty?: string;
-  graduation_code?: string; // o graduate_code
-
-  services?: string[];
+  graduate_code?: string;
+  services?: string;
   city?: string;
   university?: string;
   image?: string;

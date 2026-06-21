@@ -1,12 +1,10 @@
 import React, { useState } from "react";
-
 import {
+  Image,
+  Pressable,
+  StyleSheet,
   Text,
   View,
-  Pressable,
-  Image,
-  ScrollView,
-  StyleSheet,
 } from "react-native";
 
 type ProductItem = {
@@ -27,9 +25,46 @@ export default function ProductTabs({
   tabs,
   tabContent,
 }: Props): JSX.Element {
-  const [activeTab, setActiveTab] = useState(
-    tabs[0]
-  );
+  const [activeTab, setActiveTab] = useState(tabs[0]);
+
+  // Función para renderizar los productos en filas de 2
+  const renderProducts = () => {
+    const products = tabContent[activeTab] || [];
+    const rows = [];
+    const itemsPerRow = 2;
+
+    // Crear filas de 2 items cada una
+    for (let i = 0; i < products.length; i += itemsPerRow) {
+      const rowItems = products.slice(i, i + itemsPerRow);
+      rows.push(
+        <View key={`row-${i}`} style={styles.row}>
+          {rowItems.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <Image
+                source={{ uri: item.image }}
+                style={styles.image}
+              />
+              <View style={styles.cardContent}>
+                <Text style={styles.productName}>
+                  {item.name}
+                </Text>
+                <Text style={styles.description}>
+                  {item.description}
+                </Text>
+                <Text style={styles.moreText}>
+                  ver más ...
+                </Text>
+              </View>
+            </View>
+          ))}
+          {/* Si la fila tiene solo 1 item, agregar un espacio vacío */}
+          {rowItems.length === 1 && <View style={styles.emptyCard} />}
+        </View>
+      );
+    }
+
+    return rows;
+  };
 
   return (
     <View style={styles.container}>
@@ -41,9 +76,7 @@ export default function ProductTabs({
             onPress={() => setActiveTab(tab)}
             style={[
               styles.tabButton,
-              activeTab === tab
-                ? styles.activeTab
-                : styles.inactiveTab,
+              activeTab === tab ? styles.activeTab : styles.inactiveTab,
             ]}
           >
             <Text style={styles.tabText}>
@@ -53,41 +86,18 @@ export default function ProductTabs({
         ))}
       </View>
 
-      {/* Tab Content */}
-      <ScrollView
-        contentContainerStyle={
-          styles.scrollContent
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {tabContent[activeTab].map((item) => (
-          <View
-            key={item.id}
-            style={styles.card}
-          >
-            <Image
-              source={{ uri: item.image }}
-              style={styles.image}
-            />
-
-            <View style={styles.cardContent}>
-              <Text style={styles.productName}>
-                {item.name}
-              </Text>
-
-              <Text
-                style={styles.description}
-              >
-                {item.description}
-              </Text>
-
-              <Text style={styles.moreText}>
-                ver más ...
-              </Text>
-            </View>
+      {/* Tab Content - Ahora sin ScrollView */}
+      <View style={styles.contentContainer}>
+        {tabContent[activeTab]?.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              No hay productos disponibles en esta categoría
+            </Text>
           </View>
-        ))}
-      </ScrollView>
+        ) : (
+          renderProducts()
+        )}
+      </View>
     </View>
   );
 }
@@ -95,6 +105,7 @@ export default function ProductTabs({
 const styles = StyleSheet.create({
   container: {
     marginTop: 32,
+    flex: 1,
   },
 
   tabsContainer: {
@@ -126,17 +137,24 @@ const styles = StyleSheet.create({
     color: "#166534",
   },
 
-  scrollContent: {
-    paddingBottom: 20,
+  contentContainer: {
+    flex: 1,
+  },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 20,
   },
 
   card: {
+    flex: 1,
     backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    marginHorizontal: 4,
 
     shadowColor: "#000",
     shadowOffset: {
@@ -147,6 +165,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
 
     elevation: 3,
+  },
+
+  emptyCard: {
+    flex: 1,
+    marginHorizontal: 4,
   },
 
   image: {
@@ -176,5 +199,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#22c55e",
     marginTop: 6,
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
 });

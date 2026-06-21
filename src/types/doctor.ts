@@ -1,30 +1,21 @@
-import { User } from './user';
-import { Comment } from './comment';
-
 export interface Doctor {
   id: number;
   user_id: number;
-
   first_name: string;
   last_name: string;
   description?: string;
-  degree?: string;
+  career?: string;
   specialty?: string;
-  graduation_code?: string;
+  graduate_code?: string;
+  services?: string;
   city?: string;
   university?: string;
-
-  services?: string[];   // cast array
-  rating?: number;
   image?: string;
   schedule?: string;
-
-  created_at?: string;
-  updated_at?: string;
-
-  // relaciones
-  user?: User;
+  created_at: string;
+  updated_at: string;
+  user?: any;
   feedbacks?: any[];
   posts?: any[];
-  news?: any[];
+  services?: any[];
 }

@@ -1,4 +1,4 @@
-// screens/HomeScreen.tsx
+// screens/HomeScreen.tsx - VERSIÓN CORREGIDA
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
@@ -75,18 +75,24 @@ const HomeScreen = () => {
             colors={["#00B272"]}
           />
         }
+        contentContainerStyle={styles.scrollContent} // 👈 NUEVO: para mejor control
       >
-        {/* 1. Roles */}
-        <RoleCarousel />
+        {/* 👈 ENVOLVER cada componente en un View con width: 100% */}
+        <View style={styles.sectionWrapper}>
+          <RoleCarousel />
+        </View>
 
-        {/* 2. Productos */}
-        <ProductList limit={4} showHeader={true} />
+        <View style={styles.sectionWrapper}>
+          <ProductList limit={4} showHeader={true} />
+        </View>
 
-        {/* 3. Noticias */}
-        <LatestNews />
+        <View style={styles.sectionWrapper}>
+          <LatestNews />
+        </View>
 
-        {/* 4. Posts */}
-        <LatestPost />
+        <View style={styles.sectionWrapper}>
+          <LatestPost />
+        </View>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -133,9 +139,18 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
+  // 👈 NUEVO: para el contenido del ScrollView
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  // 👈 NUEVO: wrapper para cada componente hijo
+  sectionWrapper: {
+    width: "100%",
+  },
   footer: {
     paddingVertical: 24,
     alignItems: "center",
+    width: "100%",
   },
   footerText: {
     fontSize: 12,

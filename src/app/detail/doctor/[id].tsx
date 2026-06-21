@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
   Image,
-  ScrollView,
-  TouchableOpacity,
   Modal,
+  ScrollView,
   StyleSheet,
-  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 import { useLocalSearchParams } from "expo-router";
@@ -143,7 +142,7 @@ export default function DoctorDetailScreen() {
           </View>
         )}
 
-        {/* POSTS */}
+        {/* POSTS - View + map */}
         {activeTab === "posts" && (
           <View>
             {doctor.posts?.map((post) => (
@@ -164,7 +163,7 @@ export default function DoctorDetailScreen() {
           </View>
         )}
 
-        {/* FEEDBACKS */}
+        {/* FEEDBACKS - View + map */}
         {activeTab === "feedbacks" && (
           <View>
             {doctor.feedbacks?.map((f) => (
@@ -184,7 +183,7 @@ export default function DoctorDetailScreen() {
           </View>
         )}
 
-        {/* SERVICES */}
+        {/* SERVICES - View + map */}
         {activeTab === "services" && (
           <View style={styles.card}>
             <Text style={styles.title}>
@@ -229,7 +228,7 @@ export default function DoctorDetailScreen() {
         )}
       </ScrollView>
 
-      {/* MODAL */}
+      {/* MODAL - View + map en lugar de FlatList */}
       <Modal
         visible={modalVisible}
         transparent
@@ -237,13 +236,10 @@ export default function DoctorDetailScreen() {
       >
         <View style={styles.modal}>
           <View style={styles.modalContent}>
-            <FlatList
-              data={doctor.services}
-              keyExtractor={(item) =>
-                item.id.toString()
-              }
-              renderItem={({ item }) => (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {doctor.services?.map((item) => (
                 <View
+                  key={item.id}
                   style={styles.serviceCard}
                 >
                   <Text style={styles.title}>
@@ -261,8 +257,8 @@ export default function DoctorDetailScreen() {
                     ).toFixed(2)}
                   </Text>
                 </View>
-              )}
-            />
+              ))}
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.btn}
@@ -280,6 +276,7 @@ export default function DoctorDetailScreen() {
     </View>
   );
 }
+
 /* 🎨 ESTILOS LIMPIOS */
 const styles = StyleSheet.create({
   container: {

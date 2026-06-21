@@ -1,14 +1,14 @@
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  Image,
   FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 
 const COUNTRIES = [
@@ -95,6 +95,7 @@ export default function CountrySelector() {
   <View style={styles.modalBackground}>
     <View style={styles.modalContainer}>
       <FlatList
+        scrollEnabled={false} // 👈 AGREGAR ESTO
         data={COUNTRIES}
         keyExtractor={(item) => item.name}
         style={{ width: "100%" }}

@@ -1,6 +1,6 @@
 // src/Components/CustomButton.tsx
 import React from "react";
-import { TouchableOpacity, Text, StyleSheet } from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 
 interface CustomButtonProps {
   title: string;

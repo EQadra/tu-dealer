@@ -1,4 +1,3 @@
-// DoctorListScreen - VERSIÓN CORREGIDA DEFINITIVA
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
@@ -10,12 +9,12 @@ import {
   View,
 } from "react-native";
 
-import ExploreScreen from "../../components/ExploreScreen";
-import LatestDoctors from "../../components/LatestDoctor";
-import LatestNews from "../../components/LatestNews";
-import SearchDoctorModal from "../../components/SearchAssociationModal";
+import ExploreScreen from "./ExploreScreen";
+import LatestDoctors from "./LatestDoctor";
+import LatestNews from "./LatestNews";
+import SearchDoctorModal from "./SearchAssociationModal";
 
-import { useDarkMode } from "../../../context/app/DarkModeContext";
+import { useDarkMode } from "../../context/app/DarkModeContext";
 
 const DoctorListScreen = () => {
   const { darkMode } = useDarkMode();
@@ -26,11 +25,13 @@ const DoctorListScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
+      {/* STATUS BAR */}
       <StatusBar
         barStyle={darkMode ? "light-content" : "dark-content"}
         backgroundColor={backgroundColor}
       />
 
+      {/* HEADER CON BOTÓN DE BÚSQUEDA */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: textColor }]}>
           Doctores
@@ -43,31 +44,22 @@ const DoctorListScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Usar ScrollView con nestedScrollEnabled para evitar conflictos */}
+      {/* LISTA PRINCIPAL CON SCROLLVIEW */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         style={{ backgroundColor }}
         contentContainerStyle={{
+          paddingTop: 0,
           paddingBottom: 40,
           backgroundColor,
         }}
-        nestedScrollEnabled={true} // 👈 CLAVE: permite scroll anidado
-        keyboardShouldPersistTaps="handled"
       >
-        {/* Cada componente envuelto en un View con width: 100% */}
-        <View style={styles.sectionWrapper}>
-          <LatestDoctors />
-        </View>
-        
-        <View style={styles.sectionWrapper}>
-          <ExploreScreen />
-        </View>
-        
-        <View style={styles.sectionWrapper}>
-          <LatestNews />
-        </View>
+        <LatestDoctors />
+        <ExploreScreen />
+        <LatestNews />
       </ScrollView>
 
+      {/* MODAL DE BÚSQUEDA */}
       <SearchDoctorModal
         visible={searchModalVisible}
         onClose={() => setSearchModalVisible(false)}
@@ -98,8 +90,5 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 30,
     backgroundColor: "rgba(0, 0, 0, 0.05)",
-  },
-  sectionWrapper: {
-    width: "100%",
   },
 });
