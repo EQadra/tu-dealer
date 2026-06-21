@@ -1,4 +1,4 @@
-// screens/NewsScreen.tsx
+// screens/NewsScreen.tsx - VERSIÓN COMPLETA MEJORADA
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -6,12 +6,17 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useAuth } from "../../../../context/AuthContext";
@@ -68,8 +73,8 @@ const NewsScreen = () => {
     fetchUserLatestNews,
     fetchAllUserNews,
     addComment,
-    createNews,    // <-- Importante
-    updateNews,    // <-- Importante
+    createNews,
+    updateNews,
   } = useNewsRole();
 
   // ============================
@@ -87,6 +92,7 @@ const NewsScreen = () => {
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [url, setUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // ============================
   // COLORES (DARK MODE)
@@ -96,7 +102,7 @@ const NewsScreen = () => {
     text: darkMode ? "#F8FAFC" : "#222222",
     secondaryText: darkMode ? "#94A3B8" : "#555555",
     border: darkMode ? "#1E293B" : "#eeeeee",
-    input: darkMode ? "#1E293B" : "#f5f5f5",  // Fondo gris claro para modo claro
+    input: darkMode ? "#1E293B" : "#f5f5f5",
     inputBorder: darkMode ? "#334155" : "#dddddd",
     comment: darkMode ? "#1E293B" : "#f1f1f1",
     modal: darkMode ? "#0F172A" : "#ffffff",
@@ -104,6 +110,7 @@ const NewsScreen = () => {
     red: darkMode ? "#F87171" : "#EF4444",
     backdrop: "rgba(0,0,0,0.6)",
     placeholder: darkMode ? "#64748B" : "#999999",
+    inputText: darkMode ? "#F8FAFC" : "#1A1A1A",
   };
 
   // ============================
@@ -172,6 +179,7 @@ const NewsScreen = () => {
     setTitulo("");
     setDescripcion("");
     setUrl("");
+    setIsSubmitting(false);
   }, []);
 
   // ============================
@@ -196,17 +204,17 @@ const NewsScreen = () => {
   }, [commentText, activeNews, addComment]);
 
   // ============================
-  // SAVE NEWS (CREATE / UPDATE) - FUNCIÓN COMPLETA
+  // SAVE NEWS (CREATE / UPDATE)
   // ============================
   const handleSaveNews = useCallback(async () => {
-    // Validar campos obligatorios
     if (!titulo.trim() || !descripcion.trim()) {
       Alert.alert("Error", "Título y descripción son obligatorios");
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      // Preparar datos
       const newsData = {
         titulo: titulo.trim(),
         descripcion: descripcion.trim(),
@@ -217,34 +225,24 @@ const NewsScreen = () => {
       let successMessage;
 
       if (editingId) {
-        // Actualizar noticia existente
         response = await updateNews(editingId, newsData);
         successMessage = "Noticia actualizada correctamente";
-        console.log("Noticia actualizada:", response);
       } else {
-        // Crear nueva noticia
         response = await createNews(newsData);
         successMessage = "Noticia creada correctamente";
-        console.log("Noticia creada:", response);
       }
 
-      // Mostrar mensaje de éxito
       Alert.alert("Éxito", successMessage);
-      
-      // Cerrar modal y refrescar lista
       closeEditModal();
       await onRefresh();
-      
     } catch (error: any) {
-      console.error("Error al guardar noticia:", error);
-      
-      // Mostrar mensaje de error detallado
-      const errorMessage = 
-        error?.response?.data?.message || 
-        error?.message || 
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
         "No se pudo guardar la noticia";
-      
       Alert.alert("Error", errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   }, [titulo, descripcion, url, editingId, closeEditModal, onRefresh, createNews, updateNews]);
 
@@ -410,10 +408,13 @@ const NewsScreen = () => {
   }
 
   // ============================
-  // RENDER PRINCIPAL
+  // DATA
   // ============================
   const data = showAll ? allUserNews : userNews;
 
+  // ============================
+  // RENDER PRINCIPAL
+  // ============================
   return (
     <View style={[styles.container, { backgroundColor: colors.card }]}>
       {/* Header con título y botón de toggle */}
@@ -503,7 +504,7 @@ const NewsScreen = () => {
                   {
                     backgroundColor: colors.input,
                     borderColor: colors.inputBorder,
-                    color: colors.text,
+                    color: colors.inputText,
                   },
                 ]}
                 placeholder="Escribe un comentario..."
@@ -533,115 +534,177 @@ const NewsScreen = () => {
         </View>
       </Modal>
 
-      {/* MODAL PARA CREAR/EDITAR NOTICIA */}
+      {/* MODAL PARA CREAR/EDITAR NOTICIA - REDISEÑADO */}
       <Modal
         visible={editModalVisible}
         animationType="slide"
         transparent
         onRequestClose={closeEditModal}
       >
-        <View style={[styles.modalBackdrop, { backgroundColor: colors.backdrop }]}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.modal }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {editingId ? "✏️ Editar noticia" : "📝 Nueva noticia"}
-              </Text>
-              <TouchableOpacity onPress={closeEditModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Título */}
-            <View style={styles.inputWrapper}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Título *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.input,
-                    borderColor: colors.inputBorder,
-                    color: '#000000', // Texto siempre negro
-                  },
-                ]}
-                placeholder="Ej: Nuevo lanzamiento de producto"
-                placeholderTextColor={colors.placeholder}
-                value={titulo}
-                onChangeText={setTitulo}
-                maxLength={191}
-              />
-            </View>
-
-            {/* Descripción */}
-            <View style={styles.inputWrapper}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Descripción *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  {
-                    backgroundColor: colors.input,
-                    borderColor: colors.inputBorder,
-                    color: '#000000', // Texto siempre negro
-                  },
-                ]}
-                placeholder="Describe tu noticia en detalle..."
-                placeholderTextColor={colors.placeholder}
-                value={descripcion}
-                onChangeText={setDescripcion}
-                multiline
-                numberOfLines={4}
-                maxLength={1000}
-                textAlignVertical="top"
-              />
-            </View>
-
-            {/* URL de imagen */}
-            <View style={styles.inputWrapper}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>URL de imagen (opcional)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.input,
-                    borderColor: colors.inputBorder,
-                    color: '#000000', // Texto siempre negro
-                  },
-                ]}
-                placeholder="https://ejemplo.com/imagen.jpg"
-                placeholderTextColor={colors.placeholder}
-                value={url}
-                onChangeText={setUrl}
-                autoCapitalize="none"
-              />
-            </View>
-
-            {/* Botones */}
-            <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.green }]}
-              onPress={handleSaveNews}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={[styles.modalOverlay, { backgroundColor: colors.backdrop }]}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.keyboardView}
             >
-              <Text style={styles.saveButtonText}>
-                {editingId ? "Actualizar noticia" : "Crear noticia"}
-              </Text>
-            </TouchableOpacity>
+              <View style={[styles.editModalContainer, { backgroundColor: colors.modal }]}>
+                {/* Header */}
+                <View style={styles.editModalHeader}>
+                  <View style={styles.editModalHeaderLeft}>
+                    <TouchableOpacity
+                      onPress={closeEditModal}
+                      style={styles.editModalClose}
+                      disabled={isSubmitting}
+                    >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                    <Text style={[styles.editModalTitle, { color: colors.text }]}>
+                      {editingId ? "✏️ Editar noticia" : "📝 Nueva noticia"}
+                    </Text>
+                  </View>
+                  {editingId && (
+                    <View style={styles.editModalBadge}>
+                      <Text style={styles.editModalBadgeText}>ID: {editingId}</Text>
+                    </View>
+                  )}
+                </View>
 
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={closeEditModal}
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.secondaryText }]}>
-                Cancelar
-              </Text>
-            </TouchableOpacity>
+                <ScrollView
+                  showsVerticalScrollIndicator={true}
+                  contentContainerStyle={styles.editModalScroll}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {/* Campo: Título */}
+                  <View style={styles.editField}>
+                    <View style={styles.editFieldHeader}>
+                      <Text style={[styles.editFieldLabel, { color: colors.text }]}>
+                        Título
+                      </Text>
+                      <Text style={[styles.editFieldRequired, { color: colors.red }]}>
+                        *
+                      </Text>
+                    </View>
+                    <View style={[styles.editFieldWrapper, { borderColor: colors.border }]}>
+                      <TextInput
+                        style={[styles.editFieldInput, { color: colors.inputText }]}
+                        placeholder="Ej: Nuevo lanzamiento de producto"
+                        placeholderTextColor={colors.placeholder}
+                        value={titulo}
+                        onChangeText={setTitulo}
+                        maxLength={191}
+                        editable={!isSubmitting}
+                      />
+                    </View>
+                    <Text style={[styles.editFieldCounter, { color: colors.secondaryText }]}>
+                      {titulo.length}/191
+                    </Text>
+                  </View>
+
+                  {/* Campo: Descripción */}
+                  <View style={styles.editField}>
+                    <View style={styles.editFieldHeader}>
+                      <Text style={[styles.editFieldLabel, { color: colors.text }]}>
+                        Descripción
+                      </Text>
+                      <Text style={[styles.editFieldRequired, { color: colors.red }]}>
+                        *
+                      </Text>
+                    </View>
+                    <View style={[styles.editFieldWrapper, styles.editFieldTextArea, { borderColor: colors.border }]}>
+                      <TextInput
+                        style={[styles.editFieldInput, styles.editFieldTextAreaInput, { color: colors.inputText }]}
+                        placeholder="Describe tu noticia en detalle..."
+                        placeholderTextColor={colors.placeholder}
+                        value={descripcion}
+                        onChangeText={setDescripcion}
+                        multiline
+                        numberOfLines={5}
+                        maxLength={1000}
+                        textAlignVertical="top"
+                        editable={!isSubmitting}
+                      />
+                    </View>
+                    <Text style={[styles.editFieldCounter, { color: colors.secondaryText }]}>
+                      {descripcion.length}/1000
+                    </Text>
+                  </View>
+
+                  {/* Campo: URL de imagen */}
+                  <View style={styles.editField}>
+                    <Text style={[styles.editFieldLabel, { color: colors.text }]}>
+                      URL de imagen <Text style={{ color: colors.secondaryText, fontSize: 12 }}>(opcional)</Text>
+                    </Text>
+                    <View style={[styles.editFieldWrapper, { borderColor: colors.border }]}>
+                      <TextInput
+                        style={[styles.editFieldInput, { color: colors.inputText }]}
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                        placeholderTextColor={colors.placeholder}
+                        value={url}
+                        onChangeText={setUrl}
+                        autoCapitalize="none"
+                        editable={!isSubmitting}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Vista previa de la imagen si existe */}
+                  {url.trim() !== "" && (
+                    <View style={styles.editImagePreview}>
+                      <Image
+                        source={{ uri: url.trim() }}
+                        style={styles.editImagePreviewImage}
+                        resizeMode="cover"
+                        onError={() => {}}
+                      />
+                      <Text style={[styles.editImagePreviewText, { color: colors.secondaryText }]}>
+                        Vista previa de la imagen
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Botones de acción */}
+                  <View style={styles.editModalActions}>
+                    <TouchableOpacity
+                      style={[styles.editModalButton, styles.editModalCancelButton, { borderColor: colors.border }]}
+                      onPress={closeEditModal}
+                      disabled={isSubmitting}
+                    >
+                      <Text style={[styles.editModalButtonText, { color: colors.secondaryText }]}>
+                        Cancelar
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.editModalButton,
+                        styles.editModalSaveButton,
+                        { backgroundColor: colors.green },
+                        (!titulo.trim() || !descripcion.trim()) && styles.editModalSaveButtonDisabled,
+                      ]}
+                      onPress={handleSaveNews}
+                      disabled={!titulo.trim() || !descripcion.trim() || isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.editModalSaveButtonText}>
+                          {editingId ? "Actualizar noticia" : "Crear noticia"}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
 };
 
 // ============================
-// ESTILOS
+// ESTILOS COMPLETOS
 // ============================
 const styles = StyleSheet.create({
   container: {
@@ -839,6 +902,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
+  // Modal de comentarios
   modalBackdrop: {
     flex: 1,
     justifyContent: "center",
@@ -921,24 +985,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  inputWrapper: {
-    marginBottom: 14,
-  },
-
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-
-  textArea: {
-    minHeight: 100,
-    maxHeight: 150,
-    paddingTop: 12,
-    paddingBottom: 12,
-    textAlignVertical: "top",
-  },
-
   sendButton: {
     padding: 10,
     borderRadius: 20,
@@ -948,30 +994,192 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
 
-  saveButton: {
-    padding: 14,
+  // ============================
+  // ESTILOS DEL MODAL DE EDICIÓN - MEJORADOS
+  // ============================
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  keyboardView: {
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  editModalContainer: {
+    width: "92%",
+    maxHeight: "88%",
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+
+  editModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.06)",
+  },
+
+  editModalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+
+  editModalClose: {
+    padding: 4,
+  },
+
+  editModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    flex: 1,
+  },
+
+  editModalBadge: {
+    backgroundColor: "rgba(0,178,114,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+
+  editModalBadgeText: {
+    color: "#00B272",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+
+  editModalScroll: {
+    paddingBottom: 8,
+    paddingTop: 4,
+  },
+
+  editField: {
+    marginBottom: 18,
+  },
+
+  editFieldHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 8,
+  },
+
+  editFieldLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  editFieldRequired: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  editFieldWrapper: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.02)",
+    paddingHorizontal: 14,
+    minHeight: 48,
+    justifyContent: "center",
+  },
+
+  editFieldInput: {
+    fontSize: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+    minHeight: 48,
+  },
+
+  editFieldCounter: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 4,
+    textAlign: "right",
+    paddingRight: 4,
+  },
+
+  editFieldTextArea: {
+    alignItems: "flex-start",
+    minHeight: 130,
+    paddingTop: 8,
+  },
+
+  editFieldTextAreaInput: {
+    width: "100%",
+    minHeight: 120,
+    paddingVertical: 10,
+    textAlignVertical: "top",
+  },
+
+  editImagePreview: {
+    alignItems: "center",
+    marginBottom: 18,
+    gap: 8,
+  },
+
+  editImagePreviewImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 12,
+    backgroundColor: "#e0e0e0",
+  },
+
+  editImagePreviewText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+
+  editModalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+
+  editModalButton: {
+    flex: 1,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
   },
 
-  saveButtonText: {
-    color: "#fff",
+  editModalCancelButton: {
+    borderWidth: 1.5,
+  },
+
+  editModalSaveButton: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  editModalSaveButtonDisabled: {
+    opacity: 0.5,
+  },
+
+  editModalButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  editModalSaveButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
     fontWeight: "700",
-    fontSize: 16,
   },
-
-  cancelButton: {
-    padding: 12,
-    alignItems: "center",
-    marginTop: 4,
-  },
-
-  cancelButtonText: {
-    fontSize: 14,
-  },
-
-  
 });
 
 export default NewsScreen;
