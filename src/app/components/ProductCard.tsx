@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useDarkMode } from "../context/app/DarkModeContext";
+import { useDarkMode } from "../../context/app/DarkModeContext";
 
 interface ProductCardProps {
   product: {
