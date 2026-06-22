@@ -17,7 +17,7 @@ let ExploreScreen, LatestDoctors, LatestNews, SearchDoctorModal;
 
 try {
   // Intentar importar con require para mejor manejo de errores
-  ExploreScreen = require("../../components/ExploreScreen").default;
+  ExploreScreen = require("../../components/ProductList").default;
   LatestDoctors = require("../../components/LatestDoctor").default;
   LatestNews = require("../../components/LatestNews").default;
   SearchDoctorModal = require("../../components/SearchDoctorModal").default;

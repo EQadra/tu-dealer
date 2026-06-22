@@ -6,9 +6,9 @@ import {
   View,
 } from "react-native";
 
-import ExploreScreen from "../../components/ExploreScreen";
 import LatestAssociations from "../../components/LatestAssociations";
 import LatestNews from "../../components/LatestNews";
+import ProductList from "../../components/ProductList";
 
 import { useDarkMode } from "../../../context/app/DarkModeContext";
 
@@ -26,7 +26,7 @@ const AssociationListScreen = () => {
 
     {
       id: "explore",
-      component: <ExploreScreen />,
+      component: <ProductList />,
     },
 
     {

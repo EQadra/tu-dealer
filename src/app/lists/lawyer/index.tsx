@@ -7,9 +7,9 @@ import {
   View,
 } from "react-native";
 
-import ExploreScreen from "../../components/ExploreScreen";
 import LatestLawyer from "../../components/LatestLawyer";
 import LatestNews from "../../components/LatestNews";
+import ProductList from "../../components/ProductList";
 
 import { useDarkMode } from "../../../context/app/DarkModeContext";
 
@@ -32,7 +32,7 @@ const LawyerListScreen = () => {
 
     {
       id: "explore",
-      component: <ExploreScreen />,
+      component: <ProductList />,
     },
 
     {

@@ -1,6 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import ExploreScreen from "../../components/ExploreScreen";
+import ProductList from "../../components/ProductList";
 // import LatestAssociations from "../../components/LatestAssociations";
 // import LatestDoctors from "../../components/LatestDoctor";
 // import LatestLawyer from "../../components/LatestLawyer";
@@ -16,7 +16,7 @@ const StoreListScreen = () => {
     },
     {
       id: "explore",
-      component: <ExploreScreen />,
+      component: <ProductList />,
     },
     {
       id: "LatesNews",

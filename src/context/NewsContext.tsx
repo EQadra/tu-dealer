@@ -1,5 +1,5 @@
-// contexts/NewsContext.tsx
-import React, { createContext, useCallback, useContext } from "react";
+// context/NewsContext.tsx
+import React, { createContext, useCallback, useContext, useState } from "react";
 import api from "../utils/axios";
 
 /* =========================
@@ -22,7 +22,13 @@ export interface News {
 }
 
 interface NewsContextType {
+  // Estados
+  news: News[];
+  loading: boolean;
+  error: string | null;
+  
   // CRUD
+  fetchNews: () => Promise<void>;
   createNews: (data: any) => Promise<any>;
   updateNews: (id: number, data: any) => Promise<any>;
   deleteNews: (id: number) => Promise<any>;
@@ -31,7 +37,7 @@ interface NewsContextType {
   toggleLike: (id: number) => Promise<any>;
   checkLike: (id: number) => Promise<{ liked: boolean; likes_count: number }>;
   
-  // Obtener una noticia por ID (opcional, para detalles)
+  // Obtener una noticia por ID
   getNews: (id: number) => Promise<any>;
 }
 
@@ -44,12 +50,37 @@ const NewsContext = createContext<NewsContextType | null>(null);
    PROVIDER
 ========================= */
 export const NewsProvider = ({ children }: any) => {
+  // 🔥 ESTADOS AGREGADOS
+  const [news, setNews] = useState<News[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /* =========================
+     FETCH NEWS - 🔥 NUEVO
+  ========================== */
+  const fetchNews = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await api.get("/news");
+      setNews(Array.isArray(res.data) ? res.data : []);
+    } catch (error: any) {
+      console.error("Error al cargar noticias:", error);
+      setError(error.response?.data?.message || "Error al cargar noticias");
+      setNews([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   /* =========================
      CREATE NEWS
   ========================== */
   const createNews = useCallback(async (data: any) => {
     try {
       const res = await api.post("/news", data);
+      // Actualizar la lista
+      setNews(prev => [res.data.data, ...prev]);
       return res.data;
     } catch (error) {
       console.error("Error al crear noticia:", error);
@@ -63,6 +94,10 @@ export const NewsProvider = ({ children }: any) => {
   const updateNews = useCallback(async (id: number, data: any) => {
     try {
       const res = await api.put(`/news/${id}`, data);
+      // Actualizar en la lista
+      setNews(prev => prev.map(item => 
+        item.id === id ? res.data.data : item
+      ));
       return res.data;
     } catch (error) {
       console.error("Error al actualizar noticia:", error);
@@ -76,6 +111,8 @@ export const NewsProvider = ({ children }: any) => {
   const deleteNews = useCallback(async (id: number) => {
     try {
       const res = await api.delete(`/news/${id}`);
+      // Remover de la lista
+      setNews(prev => prev.filter(item => item.id !== id));
       return res.data;
     } catch (error) {
       console.error("Error al eliminar noticia:", error);
@@ -97,20 +134,32 @@ export const NewsProvider = ({ children }: any) => {
   }, []);
 
   /* =========================
-     TOGGLE LIKE (Dar/Quitar like)
+     TOGGLE LIKE
   ========================== */
-const toggleLike = useCallback(async (id: number) => {
-  try {
-    const res = await api.post(`/news/${id}/like`);
-    return res.data.data;
-  } catch (error) {
-    console.error("Error al toggle like:", error);
-    throw error;
-  }
-}, []);
+  const toggleLike = useCallback(async (id: number) => {
+    try {
+      const res = await api.post(`/news/${id}/like`);
+      // Actualizar estado local
+      setNews(prev => prev.map(item => {
+        if (item.id === id) {
+          const data = res.data.data;
+          return {
+            ...item,
+            liked: data.liked,
+            likes_count: data.likes_count,
+          };
+        }
+        return item;
+      }));
+      return res.data.data;
+    } catch (error) {
+      console.error("Error al toggle like:", error);
+      throw error;
+    }
+  }, []);
 
   /* =========================
-     CHECK LIKE (Verificar si ya dio like)
+     CHECK LIKE
   ========================== */
   const checkLike = useCallback(async (id: number) => {
     try {
@@ -126,6 +175,12 @@ const toggleLike = useCallback(async (id: number) => {
      VALUE
   ========================== */
   const value = {
+    // Estados
+    news,
+    loading,
+    error,
+    // Métodos
+    fetchNews,
     createNews,
     updateNews,
     deleteNews,

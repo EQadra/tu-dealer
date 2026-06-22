@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+// components/LatestAssociations.tsx
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -12,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { useAssociations } from "../../context/AssociationContext";
+// ✅ CORREGIDO: Importar desde la ruta correcta
+import SearchAssociationModal from "../components/SearchAssociationModal";
 
 /* ================================
    DARK MODE
@@ -22,11 +25,13 @@ import { useDarkMode } from "../../context/app/DarkModeContext";
 const LatestAssociations = () => {
 
   const router = useRouter();
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
   const {
     latestAssociations,
     loading,
     fetchLatestAssociations,
+    error,
   } = useAssociations();
 
   const { darkMode } = useDarkMode();
@@ -44,6 +49,7 @@ const LatestAssociations = () => {
     badge: darkMode ? "#2A2A2A" : "#FFF8DD",
     green: "#00B272",
     shadow: "#000",
+    red: "#FF4444",
   };
 
   /* ================================
@@ -51,6 +57,7 @@ const LatestAssociations = () => {
   ================================ */
 
   useEffect(() => {
+    console.log("📡 Fetching latest associations...");
     fetchLatestAssociations();
   }, []);
 
@@ -60,37 +67,89 @@ const LatestAssociations = () => {
 
   if (loading) {
     return (
-      <ActivityIndicator
-        size="large"
-        color={colors.green}
-        style={{ marginVertical: 20 }}
-      />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ActivityIndicator
+          size="large"
+          color={colors.green}
+          style={{ marginVertical: 20 }}
+        />
+        <Text style={[styles.loadingText, { color: colors.muted }]}>
+          Cargando asociaciones...
+        </Text>
+      </View>
     );
   }
 
   /* ================================
-     EMPTY
+     ERROR
   ================================ */
 
-  if (
-    !latestAssociations ||
-    latestAssociations.length === 0
-  ) {
+  if (error) {
     return (
-      <Text
-        style={[
-          styles.emptyText,
-          { color: colors.muted },
-        ]}
-      >
-        No hay asociaciones recientes
-      </Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.errorText, { color: colors.red }]}>
+          Error: {error}
+        </Text>
+        <TouchableOpacity onPress={() => fetchLatestAssociations()}>
+          <Text style={[styles.retryText, { color: colors.green }]}>
+            Reintentar
+          </Text>
+        </TouchableOpacity>
+      </View>
     );
   }
 
   const handlePress = (id: number) => {
     router.push(`/detail/association/${id}`);
   };
+
+  /* ================================
+     EMPTY
+  ================================ */
+
+  if (!latestAssociations || latestAssociations.length === 0) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: colors.background }
+        ]}
+      >
+        {/* Header con botón de búsqueda */}
+        <View style={styles.headerRow}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: colors.text },
+            ]}
+          >
+            Últimas Asociaciones
+          </Text>
+          <TouchableOpacity
+            onPress={() => setSearchModalVisible(true)}
+            style={styles.searchButton}
+          >
+            <Ionicons name="search-outline" size={24} color={colors.green} />
+          </TouchableOpacity>
+        </View>
+
+        <Text
+          style={[
+            styles.emptyText,
+            { color: colors.muted },
+          ]}
+        >
+          No hay asociaciones disponibles
+        </Text>
+
+        {/* Modal de búsqueda */}
+        <SearchAssociationModal
+          visible={searchModalVisible}
+          onClose={() => setSearchModalVisible(false)}
+        />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -101,15 +160,23 @@ const LatestAssociations = () => {
         },
       ]}
     >
-      {/* TITLE */}
-      <Text
-        style={[
-          styles.sectionTitle,
-          { color: colors.text },
-        ]}
-      >
-        Últimas Asociaciones
-      </Text>
+      {/* Header con botón de búsqueda */}
+      <View style={styles.headerRow}>
+        <Text
+          style={[
+            styles.sectionTitle,
+            { color: colors.text },
+          ]}
+        >
+          Últimas Asociaciones
+        </Text>
+        <TouchableOpacity
+          onPress={() => setSearchModalVisible(true)}
+          style={styles.searchButton}
+        >
+          <Ionicons name="search-outline" size={24} color={colors.green} />
+        </TouchableOpacity>
+      </View>
 
       {/* LIST - View + map en lugar de FlatList */}
       <View style={styles.listContent}>
@@ -124,16 +191,12 @@ const LatestAssociations = () => {
               },
             ]}
             activeOpacity={0.85}
-            onPress={() =>
-              handlePress(item.id)
-            }
+            onPress={() => handlePress(item.id)}
           >
             {/* IMAGE */}
             <Image
               source={{
-                uri:
-                  item.image ||
-                  "https://picsum.photos/300",
+                uri: item.image || "https://picsum.photos/300",
               }}
               style={styles.avatar}
             />
@@ -163,9 +226,7 @@ const LatestAssociations = () => {
               {/* BOTTOM */}
               <View style={styles.bottomRow}>
                 {/* CITY */}
-                <View
-                  style={styles.cityContainer}
-                >
+                <View style={styles.cityContainer}>
                   <Ionicons
                     name="location-outline"
                     size={13}
@@ -187,8 +248,7 @@ const LatestAssociations = () => {
                   style={[
                     styles.ratingContainer,
                     {
-                      backgroundColor:
-                        colors.badge,
+                      backgroundColor: colors.badge,
                     },
                   ]}
                 >
@@ -201,9 +261,7 @@ const LatestAssociations = () => {
                     style={[
                       styles.rating,
                       {
-                        color: darkMode
-                          ? "#FFF"
-                          : "#444",
+                        color: darkMode ? "#FFF" : "#444",
                       },
                     ]}
                   >
@@ -215,6 +273,12 @@ const LatestAssociations = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Modal de búsqueda */}
+      <SearchAssociationModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+      />
     </View>
   );
 };
@@ -228,10 +292,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
+  /* ================================
+     HEADER
+  ================================ */
+
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 14,
+  },
+
+  searchButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "transparent",
   },
 
   emptyText: {
@@ -240,8 +320,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  loadingText: {
+    textAlign: "center",
+    marginTop: 10,
+    fontSize: 14,
+  },
+
+  errorText: {
+    textAlign: "center",
+    marginVertical: 20,
+    fontSize: 14,
+  },
+
+  retryText: {
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   /* ================================
-     LIST CONTENT (NUEVO)
+     LIST CONTENT
   ================================ */
 
   listContent: {

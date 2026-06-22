@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+// components/LatestShops.tsx
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -13,9 +14,11 @@ import { useRouter } from "expo-router";
 
 import { useShops } from "../../context/ShopContext";
 import { useDarkMode } from "../../context/app/DarkModeContext";
+import SearchShopModal from "../components/SearchShopModal";
 
 const LatestShops = () => {
   const router = useRouter();
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
   const { darkMode } = useDarkMode();
 
@@ -72,14 +75,41 @@ const LatestShops = () => {
 
   if (!loading && displayedShops.length === 0) {
     return (
-      <Text
-        style={[
-          styles.emptyText,
-          { color: colors.secondary },
-        ]}
-      >
-        No hay tiendas disponibles
-      </Text>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.headerRow}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
+            Últimas Tiendas
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => setSearchModalVisible(true)}
+            style={styles.searchButton}
+          >
+            <Ionicons name="search-outline" size={24} color={colors.green} />
+          </TouchableOpacity>
+        </View>
+
+        <Text
+          style={[
+            styles.emptyText,
+            { color: colors.secondary },
+          ]}
+        >
+          No hay tiendas disponibles
+        </Text>
+
+        <SearchShopModal
+          visible={searchModalVisible}
+          onClose={() => setSearchModalVisible(false)}
+        />
+      </View>
     );
   }
 
@@ -109,28 +139,32 @@ const LatestShops = () => {
           Últimas Tiendas
         </Text>
 
-        <TouchableOpacity
-          style={[
-            styles.viewAllBadge,
-            {
-              backgroundColor: colors.green,
-            },
-          ]}
-          onPress={() =>
-            router.push("/lists/store")
-          }
-        >
-          <Text style={styles.viewAllText}>
-            Ver más
-          </Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => setSearchModalVisible(true)}
+            style={styles.searchButton}
+          >
+            <Ionicons name="search-outline" size={24} color={colors.green} />
+          </TouchableOpacity>
 
-          <Ionicons
-            name="arrow-forward"
-            size={14}
-            color="#fff"
-            style={{ marginLeft: 5 }}
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.viewAllBadge,
+              {
+                backgroundColor: colors.green,
+              },
+            ]}
+            onPress={() => router.push("/lists/store")}
+          >
+            <Text style={styles.viewAllText}>Ver más</Text>
+            <Ionicons
+              name="arrow-forward"
+              size={14}
+              color="#fff"
+              style={{ marginLeft: 5 }}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* LIST - Usando View + map en lugar de FlatList */}
@@ -310,6 +344,12 @@ const LatestShops = () => {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Modal de búsqueda */}
+      <SearchShopModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+      />
     </View>
   );
 };
@@ -335,9 +375,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
+  },
+
+  searchButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "transparent",
   },
 
   viewAllBadge: {
@@ -355,7 +407,7 @@ const styles = StyleSheet.create({
   },
 
   /* =========================
-     LIST CONTAINER (NUEVO)
+     LIST CONTAINER
   ========================= */
 
   listContainer: {

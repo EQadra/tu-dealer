@@ -57,19 +57,28 @@ export const ProductProvider = ({ children }: { children: ReactNode }) => {
   // FETCH: Todos los productos
   // ============================================================
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api.get("/products");
-      setProducts(res.data);
-    } catch (err: any) {
-      console.error("Error fetching products:", err);
-      setError(err.response?.data?.message || "Error al cargar productos");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+// context/ProductContext.tsx - fetchProducts corregido
+const fetchProducts = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    const res = await api.get("/products");
+    
+    console.log("📦 Respuesta de /products:", res.data);
+    
+    // Manejar respuesta paginada
+    const productsData = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+    console.log("📊 Productos procesados:", productsData.length);
+    
+    setProducts(productsData);
+  } catch (err: any) {
+    console.error("Error fetching products:", err);
+    setError(err.response?.data?.message || "Error al cargar productos");
+    setProducts([]);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   // ============================================================
   // FETCH: Productos por tienda
