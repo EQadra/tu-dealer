@@ -95,19 +95,35 @@ export const LawyerProvider = ({ children }: { children: ReactNode }) => {
   /* -----------------------------
    | GET /lawyers/{id}
    ----------------------------- */
-  const fetchLawyerById = async (id: number) => {
+// En LawyerContext.jsx - CORREGIDO
+const fetchLawyerById = async (id) => {
+  try {
     setLoading(true);
     setError(null);
-
-    try {
-      const res = await api.get(`/lawyers/${id}`);
-      setLawyer(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error al cargar abogado");
-    } finally {
-      setLoading(false);
-    }
-  };
+    
+    // ✅ Verifica que estás en la URL correcta
+    const response = await api.get(`/lawyers/${id}`);
+    
+    // 🔥 IMPORTANTE: Dependiendo de cómo devuelva el backend
+    // Si devuelve { data: {...} } usa response.data.data
+    // Si devuelve directamente el objeto usa response.data
+    
+    // En tu caso, por el log exitoso de /lawyers/me, parece que devuelve directamente el objeto
+    setLawyer(response.data);
+    
+    console.log("✅ Abogado cargado:", response.data.id);
+    
+  } catch (err) {
+    console.error("❌ Error en fetchLawyerById:", err);
+    
+    // Muestra el error específico
+    const errorMsg = err.response?.data?.message || err.message || "Error al cargar abogado";
+    setError(errorMsg);
+    setLawyer(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
   /* -----------------------------
    | POST /lawyers
