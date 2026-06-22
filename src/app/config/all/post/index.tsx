@@ -1,4 +1,4 @@
-// screens/PostsScreen.tsx - VERSIÓN COMPLETA CON MODAL Y TOGGLE
+// screens/PostsScreen.tsx - CORRECCIÓN DEL MODAL DE COMENTARIOS
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
@@ -14,10 +14,11 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  View,
+  View
 } from "react-native";
 
 import { useAuth } from "../../../../context/AuthContext";
+import { useComments } from "../../../../context/CommentContext";
 import { usePosts } from "../../../../context/PostContext";
 
 export default function PostsScreen() {
@@ -29,6 +30,12 @@ export default function PostsScreen() {
     deletePost,
     toggleLike,
   } = usePosts();
+
+  const {
+    fetchPostComments,
+    createPostComment,
+    deletePostComment,
+  } = useComments();
 
   const { user } = useAuth();
 
@@ -44,6 +51,14 @@ export default function PostsScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Estados para comentarios
+  const [commentModalVisible, setCommentModalVisible] = useState(false);
+  const [activePostId, setActivePostId] = useState<number | null>(null);
+  const [activePostTitle, setActivePostTitle] = useState("");
+  const [postComments, setPostComments] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [loadingComments, setLoadingComments] = useState(false);
+
   useEffect(() => {
     loadPosts();
   }, []);
@@ -52,7 +67,7 @@ export default function PostsScreen() {
     await fetchMyPosts();
   };
 
-  // Toggle entre ver todas y ver recientes (últimas 3)
+  // Toggle entre ver todas y ver recientes
   const toggleView = () => {
     setShowAll(!showAll);
   };
@@ -112,6 +127,50 @@ export default function PostsScreen() {
     }
   };
 
+  // ============================
+  // COMENTARIOS
+  // ============================
+  const openComments = async (postId: number, postTitle: string) => {
+    setActivePostId(postId);
+    setActivePostTitle(postTitle);
+    setCommentModalVisible(true);
+    await loadComments(postId);
+  };
+
+  const loadComments = async (postId: number) => {
+    setLoadingComments(true);
+    try {
+      const comments = await fetchPostComments(postId);
+      setPostComments(comments || []);
+    } catch (error) {
+      console.log("Error loading comments:", error);
+      setPostComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!commentText.trim() || !activePostId) return;
+
+    try {
+      const newComment = await createPostComment(activePostId, commentText.trim());
+      setPostComments(prev => [newComment, ...prev]);
+      setCommentText("");
+    } catch (error) {
+      console.log("Error adding comment:", error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    try {
+      await deletePostComment(commentId);
+      setPostComments(prev => prev.filter(c => c.id !== commentId));
+    } catch (error) {
+      console.log("Error deleting comment:", error);
+    }
+  };
+
   // Renderizar cada post
   const renderPost = ({ item }: any) => {
     const isLiked = item.liked || false;
@@ -165,7 +224,7 @@ export default function PostsScreen() {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => {}}
+            onPress={() => openComments(item.id, item.title)}
           >
             <Ionicons name="chatbubble-outline" size={22} color="#6B7280" />
             <Text style={styles.actionText}>
@@ -187,12 +246,31 @@ export default function PostsScreen() {
     );
   };
 
-  // Determinar qué datos mostrar
+  // Renderizar comentario
+  const renderComment = ({ item }: any) => (
+    <View style={styles.commentBubble}>
+      <View style={styles.commentHeader}>
+        <Text style={styles.commentUser}>
+          {item.user?.name || "Usuario"}
+        </Text>
+        {item.user?.id === user?.id && (
+          <TouchableOpacity onPress={() => handleDeleteComment(item.id)}>
+            <Ionicons name="trash-outline" size={16} color="#DC2626" />
+          </TouchableOpacity>
+        )}
+      </View>
+      <Text style={styles.commentText}>{item.content}</Text>
+      <Text style={styles.commentDate}>
+        {new Date(item.created_at).toLocaleString()}
+      </Text>
+    </View>
+  );
+
   const displayData = showAll ? posts : (myPosts?.slice(0, 3) || []);
 
   return (
     <View style={styles.container}>
-      {/* HEADER CON TÍTULO Y BOTONES */}
+      {/* HEADER */}
       <View style={styles.headerRow}>
         <Text style={styles.screenTitle}>📝 Mis publicaciones</Text>
         <View style={styles.headerButtons}>
@@ -241,7 +319,7 @@ export default function PostsScreen() {
         }
       />
 
-      {/* MODAL PARA CREAR POST */}
+      {/* MODAL CREAR POST */}
       <Modal
         visible={modalVisible}
         transparent
@@ -255,7 +333,6 @@ export default function PostsScreen() {
               style={styles.modalWrapper}
             >
               <View style={styles.modalContent}>
-                {/* Header del Modal */}
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>📝 Nueva publicación</Text>
                   <TouchableOpacity
@@ -266,7 +343,6 @@ export default function PostsScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Formulario */}
                 <TextInput
                   placeholder="Título"
                   placeholderTextColor="#9CA3AF"
@@ -329,6 +405,93 @@ export default function PostsScreen() {
                     <Text style={styles.publishBtnText}>
                       {isSubmitting ? "Publicando..." : "Publicar"}
                     </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* MODAL COMENTARIOS - CORREGIDO */}
+      <Modal
+        visible={commentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setCommentModalVisible(false);
+          setPostComments([]);
+          setCommentText("");
+        }}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              style={styles.modalWrapper}
+            >
+              <View style={[styles.modalContent, styles.commentModalContent]}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>💬 Comentarios</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCommentModalVisible(false);
+                      setPostComments([]);
+                      setCommentText("");
+                    }}
+                    style={styles.modalClose}
+                  >
+                    <Ionicons name="close" size={24} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+
+                {activePostTitle && (
+                  <Text style={styles.commentPostTitle}>{activePostTitle}</Text>
+                )}
+
+                {loadingComments ? (
+                  <View style={styles.loadingContainer}>
+                    <Text>Cargando comentarios...</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={postComments}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderComment}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.commentList}
+                    ListEmptyComponent={
+                      <View style={styles.noCommentsContainer}>
+                        <Ionicons name="chatbubble-outline" size={40} color="#D1D5DB" />
+                        <Text style={styles.noComments}>
+                          No hay comentarios aún. ¡Sé el primero!
+                        </Text>
+                      </View>
+                    }
+                  />
+                )}
+
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.commentInput}
+                    placeholder="Escribe un comentario..."
+                    placeholderTextColor="#9CA3AF"
+                    value={commentText}
+                    onChangeText={setCommentText}
+                    multiline
+                    maxLength={500}
+                    returnKeyType="send"
+                    onSubmitEditing={handleAddComment}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.sendButton,
+                      { backgroundColor: commentText.trim() ? "#16A34A" : "#D1D5DB" },
+                    ]}
+                    onPress={handleAddComment}
+                    disabled={!commentText.trim()}
+                  >
+                    <Ionicons name="send" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -548,6 +711,10 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 
+  commentModalContent: {
+    maxHeight: "80%",
+  },
+
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -636,6 +803,101 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "700",
     fontSize: 15,
+  },
+
+  // MODAL COMENTARIOS
+  commentPostTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+
+  commentList: {
+    maxHeight: 300,
+    paddingBottom: 8,
+  },
+
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+
+  commentBubble: {
+    backgroundColor: "#F3F4F6",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+
+  commentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+
+  commentUser: {
+    fontWeight: "700",
+    fontSize: 13,
+    color: "#111827",
+  },
+
+  commentText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#374151",
+  },
+
+  commentDate: {
+    fontSize: 10,
+    color: "#6B7280",
+    marginTop: 4,
+    textAlign: "right",
+  },
+
+  noCommentsContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+    gap: 8,
+  },
+
+  noComments: {
+    textAlign: "center",
+    color: "#6B7280",
+    fontSize: 14,
+  },
+
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    marginTop: 10,
+    gap: 8,
+  },
+
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FAFAFA",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    maxHeight: 80,
+    fontSize: 14,
+    color: "#111827",
+  },
+
+  sendButton: {
+    padding: 10,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 44,
+    minHeight: 44,
   },
 
   // MODAL ELIMINAR

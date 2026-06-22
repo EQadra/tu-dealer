@@ -12,6 +12,8 @@ import { ImageUploadProvider } from "../context/app/ImageUploadContext";
 
 import { AssociationProvider } from "../context/AssociationContext";
 import { DoctorProvider } from "../context/DoctorContext";
+import { FavoriteProvider } from "../context/FavoriteContext";
+import { HistoryProvider } from "../context/HistoryContext";
 import { LawyerProvider } from "../context/LawyerContext";
 import { PostProvider } from "../context/PostContext";
 import { ProductProvider } from "../context/ProductContext";
@@ -129,9 +131,13 @@ export default function RootLayout(): JSX.Element {
                 <ServiceProvider>
                   <ProductProvider>
                     <DoctorProvider>
-                      <CommentProvider>
-                      <AppContent />
-                      </CommentProvider>
+                      <FavoriteProvider> {/* 👈 Agregar aquí */}
+                         <HistoryProvider> {/* 👈 Agregar aquí */}
+                       <CommentProvider>
+                        <AppContent />
+                       </CommentProvider>
+                       </HistoryProvider> 
+                      </FavoriteProvider>
                     </DoctorProvider>
                   </ProductProvider>
                   </ServiceProvider>

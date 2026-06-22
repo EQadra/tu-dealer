@@ -1,284 +1,424 @@
-import React, { useState } from 'react';
+// app/favorites/index.tsx (o screens/FavoritesScreen.tsx)
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Image,
-  Modal,
-  Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
+} from "react-native";
+import { useDarkMode } from "../../../../context/app/DarkModeContext";
+import { useFavorites } from "../../../../context/FavoriteContext";
 
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+type FilterType = 'all' | 'products' | 'news' | 'posts' | 'doctors' | 'lawyers' | 'shops' | 'associations';
 
-/* =========================
-   DATA
-========================= */
+const FavoritesScreen = () => {
+  const { darkMode } = useDarkMode();
+  const { favorites, loading, fetchMyFavorites, fetchFavoritesByType, toggleFavorite } = useFavorites();
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('all');
 
-const FAVORITOS = [
-  {
-    id: '1',
-    title: 'Greenleaf Shop',
-    subtitle: 'Lima (5km)',
-    description:
-      'Tratamientos para dolor crónico y ansiedad. +120 pacientes atendidos',
-    image: 'https://picsum.photos/200/200?random=1',
-  },
-  {
-    id: '2',
-    title: 'LegalGreen Abogados',
-    subtitle: 'Lima (2km)',
-    description:
-      'Asesoría en licencias de cultivo y defensa legal en procesos vinculados al cannabis',
-    image: 'https://picsum.photos/200/200?random=2',
-  },
-  {
-    id: '3',
-    title: 'Asociación Raíces Libres',
-    subtitle: 'Cusco, Perú',
-    description:
-      'Organiza talleres presenciales y ofrece apoyo a pacientes con epilepsia',
-    image: 'https://picsum.photos/200/200?random=3',
-  },
-  {
-    id: '4',
-    title: 'Cápsulas CBD Full Spectrum',
-    subtitle: '10% – 30 unidades · Lima (5km)',
-    description:
-      'Uso nocturno para mejorar el sueño. Disponible para entrega local',
-    image: 'https://picsum.photos/200/200?random=4',
-  },
-];
-
-/* =========================
-   COMPONENT
-========================= */
-
-export default function FavoritosScreen() {
-  const router = useRouter();
-
-  const [selected, setSelected] = useState(null);
-  const [visible, setVisible] = useState(false);
-
-  const openModal = (item) => {
-    setSelected(item);
-    setVisible(true);
+  const colors = {
+    background: darkMode ? "#020617" : "#f5f5f5",
+    card: darkMode ? "#1E293B" : "#FFFFFF",
+    text: darkMode ? "#F8FAFC" : "#222222",
+    secondaryText: darkMode ? "#94A3B8" : "#555555",
+    primary: darkMode ? "#4ADE80" : "#00B272",
+    border: darkMode ? "#334155" : "#E5E5E5",
+    red: "#EF4444",
+    shadow: darkMode ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.1)",
   };
 
-  const closeModal = () => {
-    setVisible(false);
-    setSelected(null);
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  const loadFavorites = async () => {
+    if (filter === 'all') {
+      await fetchMyFavorites();
+    } else {
+      await fetchFavoritesByType(filter);
+    }
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => openModal(item)}>
-      <Image source={{ uri: item.image }} style={styles.image} />
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadFavorites();
+    setRefreshing(false);
+  };
 
-      <View style={styles.cardContent}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.subtitle}>{item.subtitle}</Text>
-        <Text style={styles.description} numberOfLines={2}>
-          {item.description}
+  const handleFilterChange = (newFilter: FilterType) => {
+    setFilter(newFilter);
+    setTimeout(() => {
+      loadFavorites();
+    }, 100);
+  };
+
+  const handleToggleFavorite = async (item: any) => {
+    try {
+      const type = getTypeFromModel(item.favoritable_type);
+      await toggleFavorite(type, item.favoritable_id);
+      await loadFavorites();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  const getTypeFromModel = (modelType: string): string => {
+    const map: Record<string, string> = {
+      'App\\Models\\Product': 'product',
+      'App\\Models\\News': 'news',
+      'App\\Models\\Post': 'post',
+      'App\\Models\\Doctor': 'doctor',
+      'App\\Models\\Lawyer': 'lawyer',
+      'App\\Models\\Shop': 'shop',
+      'App\\Models\\Association': 'association',
+    };
+    return map[modelType] || 'product';
+  };
+
+  const getIconForType = (modelType: string): string => {
+    const map: Record<string, string> = {
+      'App\\Models\\Product': '🛍️',
+      'App\\Models\\News': '📰',
+      'App\\Models\\Post': '📝',
+      'App\\Models\\Doctor': '👨‍⚕️',
+      'App\\Models\\Lawyer': '⚖️',
+      'App\\Models\\Shop': '🏪',
+      'App\\Models\\Association': '🤝',
+    };
+    return map[modelType] || '📌';
+  };
+
+  const getLabelForType = (modelType: string): string => {
+    const map: Record<string, string> = {
+      'App\\Models\\Product': 'Producto',
+      'App\\Models\\News': 'Noticia',
+      'App\\Models\\Post': 'Post',
+      'App\\Models\\Doctor': 'Doctor',
+      'App\\Models\\Lawyer': 'Abogado',
+      'App\\Models\\Shop': 'Tienda',
+      'App\\Models\\Association': 'Asociación',
+    };
+    return map[modelType] || 'Item';
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    const data = item.favoritable;
+    if (!data) return null;
+
+    const isProduct = item.favoritable_type === 'App\\Models\\Product';
+    const isNews = item.favoritable_type === 'App\\Models\\News';
+    
+    // Obtener título y descripción según el tipo
+    let title = '';
+    let description = '';
+    let imageUrl = null;
+    let price = null;
+    let extraInfo = '';
+
+    if (isProduct) {
+      title = data.name || 'Producto';
+      description = data.description || 'Sin descripción';
+      imageUrl = data.image;
+      price = data.price;
+      extraInfo = `Stock: ${data.stock || 0}`;
+    } else if (isNews) {
+      title = data.titulo || 'Noticia';
+      description = data.descripcion || 'Sin descripción';
+      imageUrl = data.url;
+      price = null;
+    }
+
+    const date = new Date(item.created_at).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    const icon = getIconForType(item.favoritable_type);
+    const label = getLabelForType(item.favoritable_type);
+
+    return (
+      <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <View style={[styles.typeBadge, { 
+              backgroundColor: isProduct ? '#22C55E' : '#3B82F6' 
+            }]}>
+              <Text style={styles.typeBadgeText}>
+                {icon} {label}
+              </Text>
+            </View>
+            <Text style={[styles.date, { color: colors.secondaryText }]}>{date}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.favoriteButton}
+            onPress={() => handleToggleFavorite(item)}
+          >
+            <Ionicons name="heart" size={24} color={colors.red} />
+          </TouchableOpacity>
+        </View>
+
+        {imageUrl && (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => {}}
+          />
+        )}
+
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
+          {title}
+        </Text>
+
+        <Text style={[styles.description, { color: colors.secondaryText }]} numberOfLines={2}>
+          {description}
+        </Text>
+
+        {isProduct && price !== null && (
+          <Text style={[styles.price, { color: colors.primary }]}>
+            S/ {price}
+          </Text>
+        )}
+
+        {isProduct && extraInfo && (
+          <Text style={[styles.extraInfo, { color: colors.secondaryText }]}>
+            {extraInfo}
+          </Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="heart-outline" size={80} color={colors.secondaryText} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+        No tienes favoritos
+      </Text>
+      <Text style={[styles.emptySubtitle, { color: colors.secondaryText }]}>
+        {filter === 'all' 
+          ? 'Comienza a guardar productos, noticias y más que te gusten'
+          : `No tienes ${filter} en favoritos`}
+      </Text>
+    </View>
+  );
+
+  if (loading && !refreshing) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.secondaryText }]}>
+          Cargando favoritos...
         </Text>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <MaterialCommunityIcons name="chevron-left" size={28} color="#111" />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Favoritos</Text>
-
-        <TouchableOpacity>
-          <MaterialCommunityIcons name="dots-horizontal" size={24} color="#111" />
-        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          ❤️ Mis favoritos
+        </Text>
+        <Text style={[styles.headerCount, { color: colors.secondaryText }]}>
+          {favorites.length} items
+        </Text>
       </View>
 
-      {/* LISTA */}
+      {/* Filtros */}
+      <View style={styles.filterContainer}>
+        {['all', 'products', 'news', 'posts', 'doctors', 'lawyers', 'shops', 'associations'].map((type) => {
+          const labels: Record<string, string> = {
+            all: 'Todos',
+            products: '🛍️',
+            news: '📰',
+            posts: '📝',
+            doctors: '👨‍⚕️',
+            lawyers: '⚖️',
+            shops: '🏪',
+            associations: '🤝',
+          };
+          return (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.filterButton,
+                filter === type && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => handleFilterChange(type as FilterType)}
+            >
+              <Text style={[
+                styles.filterText,
+                { color: filter === type ? '#FFFFFF' : colors.secondaryText }
+              ]}>
+                {labels[type] || type}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Lista */}
       <FlatList
-        data={FAVORITOS}
-        keyExtractor={(item) => item.id}
+        data={favorites}
+        keyExtractor={(item) => `${item.id}-${item.favoritable_id}`}
         renderItem={renderItem}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={renderEmpty}
       />
-
-      {/* FOOTER LOGO */}
-      <View style={styles.floatingIcon}>
-        <Image
-          source={require("../../../../assets/logo.png")}
-          style={{
-            width: 140,
-            height: 42,
-            resizeMode: "contain",
-          }}
-        />
-      </View>
-
-      {/* MODAL */}
-      <Modal visible={visible} transparent animationType="fade">
-        <Pressable style={styles.overlay} onPress={closeModal}>
-          <View style={styles.modalBox}>
-            {selected && (
-              <>
-                <Image
-                  source={{ uri: selected.image }}
-                  style={styles.modalImage}
-                />
-
-                <Text style={styles.modalTitle}>{selected.title}</Text>
-                <Text style={styles.modalSubtitle}>{selected.subtitle}</Text>
-                <Text style={styles.modalDescription}>
-                  {selected.description}
-                </Text>
-
-                <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>
-                  <Text style={styles.closeText}>Cerrar</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+    </View>
   );
-}
-
-/* =========================
-   STYLES
-========================= */
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF',
-    paddingHorizontal: 16,
   },
-
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
-
   headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#111',
+    fontSize: 22,
+    fontWeight: '700',
   },
-
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#F7F7F7',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 14,
-    alignItems: 'center',
-  },
-
-  image: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-
-  cardContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-
-  title: {
+  headerCount: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#111',
+    fontWeight: '500',
   },
-
-  subtitle: {
-    fontSize: 12,
-    color: '#666',
-    marginVertical: 2,
-  },
-
-  description: {
-    fontSize: 12,
-    color: '#444',
-    lineHeight: 16,
-  },
-
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-
-  modalBox: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-  },
-
-  modalImage: {
-    width: '100%',
-    height: 160,
-    borderRadius: 12,
+  filterContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    gap: 8,
     marginBottom: 12,
   },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6,
-    color: '#111',
+  filterButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 10,
-  },
-
-  modalDescription: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 20,
-  },
-
-  closeBtn: {
-    backgroundColor: '#1E8E3E',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-
-  closeText: {
-    color: '#fff',
+  filterText: {
+    fontSize: 12,
     fontWeight: '600',
   },
-
-  floatingIcon: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: '#fff',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 80,
+  },
+  card: {
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  typeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  typeBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  date: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  favoriteButton: {
+    padding: 4,
+  },
+  image: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: '#E5E7EB',
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 6,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  extraInfo: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
+    paddingVertical: 80,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
+
+export default FavoritesScreen;

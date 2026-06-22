@@ -1,6 +1,5 @@
-// components/ProductList.tsx - CON COMENTARIOS Y WHATSAPP
+// components/ProductList.tsx - VERSIÓN MEJORADA CON HISTORIAL
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +19,8 @@ import {
 import { useDarkMode } from "../../context/app/DarkModeContext";
 import { useAuth } from "../../context/AuthContext";
 import { useComments } from "../../context/CommentContext";
+import { useFavorites } from "../../context/FavoriteContext";
+import { useHistory } from "../../context/HistoryContext";
 import { useProducts } from "../../context/ProductContext";
 import ProductCard from "./ProductCard";
 
@@ -39,6 +40,8 @@ interface Product {
     id?: number;
   };
   whatsapp?: string;
+  liked?: boolean;
+  likes_count?: number;
 }
 
 interface Comment {
@@ -62,16 +65,23 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
     createProductComment,
     deleteProductComment 
   } = useComments();
+  
+  const { 
+    toggleFavorite, 
+    favorites,
+    fetchMyFavorites 
+  } = useFavorites();
+
+  const { addHistory } = useHistory();
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [favorites, setFavorites] = useState<number[]>([]);
   const [favoriteLoading, setFavoriteLoading] = useState<number | null>(null);
+  const [favoriteMap, setFavoriteMap] = useState<Record<number, boolean>>({});
   
   // Estados para comentarios
   const [commentText, setCommentText] = useState("");
   const [productComments, setProductComments] = useState<Comment[]>([]);
-  const [commentModalVisible, setCommentModalVisible] = useState(false);
   
   // Estado para el modal de cantidad/WhatsApp
   const [quantityModalVisible, setQuantityModalVisible] = useState(false);
@@ -87,36 +97,57 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
     inputBackground: darkMode ? "#1E293B" : "#F3F3F3",
     border: darkMode ? "#334155" : "#E5E5E5",
     shadow: darkMode ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.1)",
+    red: "#EF4444",
   };
 
-  // Cargar favoritos desde AsyncStorage
+  // Cargar favoritos desde el backend
   useEffect(() => {
-    loadFavorites();
+    loadFavoritesFromBackend();
   }, []);
 
-  // Cargar comentarios cuando se abre el modal de detalle
-  useEffect(() => {
-    if (detailModalVisible && selectedProduct) {
-      loadProductComments(selectedProduct.id);
-    }
-  }, [detailModalVisible, selectedProduct]);
-
-  const loadFavorites = async () => {
+  const loadFavoritesFromBackend = async () => {
     try {
-      const saved = await AsyncStorage.getItem("productFavorites");
-      if (saved) {
-        setFavorites(JSON.parse(saved));
-      }
+      await fetchMyFavorites();
+      const map: Record<number, boolean> = {};
+      favorites.forEach(fav => {
+        if (fav.favoritable_type === 'App\\Models\\Product') {
+          map[fav.favoritable_id] = true;
+        }
+      });
+      setFavoriteMap(map);
     } catch (error) {
       console.error("Error loading favorites:", error);
     }
   };
 
-  const saveFavorites = async (newFavorites: number[]) => {
+  // Verificar si un producto está en favoritos
+  const isProductFavorited = (productId: number): boolean => {
+    return favoriteMap[productId] || false;
+  };
+
+  // Toggle favorito usando el backend
+  const handleToggleFavorite = async (productId: number) => {
+    setFavoriteLoading(productId);
+    
     try {
-      await AsyncStorage.setItem("productFavorites", JSON.stringify(newFavorites));
-    } catch (error) {
-      console.error("Error saving favorites:", error);
+      const result = await toggleFavorite('product', productId);
+      
+      setFavoriteMap(prev => ({
+        ...prev,
+        [productId]: result.favorited
+      }));
+
+      await fetchMyFavorites();
+
+      Alert.alert(
+        result.favorited ? "❤️ Agregado a favoritos" : "💔 Eliminado de favoritos",
+        result.message
+      );
+    } catch (error: any) {
+      console.error("Error toggling favorite:", error);
+      Alert.alert("Error", error?.message || "No se pudo actualizar favoritos");
+    } finally {
+      setFavoriteLoading(null);
     }
   };
 
@@ -124,48 +155,25 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
   const loadProductComments = async (productId: number) => {
     try {
       await fetchProductComments(productId);
-      // Asumiendo que el contexto guarda los comentarios en un estado
-      // Si no, podrías obtenerlos directamente de la respuesta
       setProductComments(comments);
     } catch (error) {
       console.error("Error loading comments:", error);
     }
   };
 
-  // Toggle favorito
-  const handleToggleFavorite = async (productId: number) => {
-    setFavoriteLoading(productId);
-    
-    try {
-      let newFavorites;
-      if (favorites.includes(productId)) {
-        newFavorites = favorites.filter(id => id !== productId);
-      } else {
-        newFavorites = [...favorites, productId];
-      }
-      
-      setFavorites(newFavorites);
-      await saveFavorites(newFavorites);
-
-      const isFavorite = newFavorites.includes(productId);
-      Alert.alert(
-        isFavorite ? "❤️ Agregado a favoritos" : "💔 Eliminado de favoritos",
-        isFavorite 
-          ? "El producto ha sido agregado a tu lista de favoritos" 
-          : "El producto ha sido eliminado de tus favoritos"
-      );
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
-      Alert.alert("Error", "No se pudo actualizar los favoritos");
-    } finally {
-      setFavoriteLoading(null);
-    }
-  };
-
-  // Abrir detalle del producto
-  const openDetail = (product: Product) => {
+  // 👈 MODIFICADO: Abrir detalle del producto con historial
+  const openDetail = async (product: Product) => {
     setSelectedProduct(product);
     setDetailModalVisible(true);
+    
+    // Registrar en historial al abrir detalle
+    try {
+      await addHistory('product', product.id);
+      console.log(`📊 Historial registrado: Producto ${product.id} - ${product.name}`);
+    } catch (error) {
+      // Error silencioso para no interrumpir la UX
+      console.error("Error adding history:", error);
+    }
   };
 
   // Cerrar detalle
@@ -213,16 +221,32 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
     );
   };
 
-  // Abrir modal de cantidad para WhatsApp
+  // 👈 MODIFICADO: Abrir modal de cantidad para WhatsApp con historial
   const openQuantityModal = (product: Product) => {
     setProductForWhatsApp(product);
     setQuantity("1");
     setQuantityModalVisible(true);
+    
+    // Registrar en historial al abrir WhatsApp
+    try {
+      addHistory('product', product.id);
+      console.log(`📊 Historial registrado: WhatsApp abierto para producto ${product.id}`);
+    } catch (error) {
+      console.error("Error adding history:", error);
+    }
   };
 
-  // Enviar a WhatsApp con cantidad
+  // 👈 MODIFICADO: Enviar a WhatsApp con cantidad y registrar historial
   const sendToWhatsApp = () => {
     if (!productForWhatsApp) return;
+    
+    // Registrar en historial al enviar mensaje por WhatsApp
+    try {
+      addHistory('product', productForWhatsApp.id);
+      console.log(`📊 Historial registrado: WhatsApp enviado para producto ${productForWhatsApp.id}`);
+    } catch (error) {
+      console.error("Error adding history:", error);
+    }
     
     const phoneNumber = productForWhatsApp.whatsapp || "51999999999";
     const quantityNum = parseInt(quantity) || 1;
@@ -280,8 +304,9 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
               onPress={(product) => openDetail(product)}
               onWhatsApp={(product) => openQuantityModal(product)}
               showFavoriteButton={true}
-              isFavorite={favorites.includes(item.id)}
+              isFavorite={isProductFavorited(item.id)}
               onToggleFavorite={(productId) => handleToggleFavorite(productId)}
+              loading={favoriteLoading === item.id}
             />
           ))}
           {rowItems.length === 1 && <View style={styles.emptyCard} />}
@@ -353,7 +378,7 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
   const renderProductDetail = () => {
     if (!selectedProduct) return null;
 
-    const isFavorite = favorites.includes(selectedProduct.id);
+    const isFavorite = isProductFavorited(selectedProduct.id);
     const categoryName = selectedProduct.productable?.name || "Producto";
     const formattedDate = new Date().toLocaleDateString("es-ES", {
       day: "2-digit",
@@ -653,7 +678,7 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
         </Text>
         {favorites.length > 0 && (
           <TouchableOpacity 
-            onPress={() => Alert.alert("Favoritos", `Tienes ${favorites.length} productos favoritos`)}
+            onPress={() => Alert.alert("Favoritos", `Tienes ${favorites.length} items en favoritos`)}
           >
             <View style={styles.favoritesBadge}>
               <Ionicons name="heart" size={20} color="#EF4444" />
@@ -686,6 +711,7 @@ const ProductList = ({ limit = 4 }: ProductListProps) => {
   );
 };
 
+// Estilos (mantén los mismos que ya tenías)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -743,7 +769,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
   },
-  // Estilos del Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -865,7 +890,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
-  // Estilos de comentarios
   commentsSection: {
     marginTop: 10,
     marginBottom: 20,
@@ -959,7 +983,6 @@ const styles = StyleSheet.create({
     minWidth: 44,
     minHeight: 44,
   },
-  // Estilos del modal de cantidad
   quantityOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",

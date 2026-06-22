@@ -1,4 +1,4 @@
-// context/CommentContext.tsx
+// context/CommentContext.tsx - VERSIÓN COMPLETA CON POSTS
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import { Comment } from '../types/comment';
@@ -10,15 +10,20 @@ interface CommentContextProps {
   loading: boolean;
   error: string | null;
   
-  // Para noticias (mantenido)
+  // Para noticias
   fetchComments: () => Promise<void>;
   createComment: (data: CreateCommentPayload) => Promise<Comment>;
   deleteComment: (id: number) => Promise<void>;
   
-  // Para productos (NUEVO)
+  // Para productos
   fetchProductComments: (productId: number) => Promise<Comment[]>;
   createProductComment: (productId: number, content: string) => Promise<Comment>;
   deleteProductComment: (id: number) => Promise<void>;
+
+  // NUEVO: Para posts
+  fetchPostComments: (postId: number) => Promise<Comment[]>;
+  createPostComment: (postId: number, content: string) => Promise<Comment>;
+  deletePostComment: (id: number) => Promise<void>;
 }
 
 const CommentContext = createContext<CommentContextProps>(
@@ -83,7 +88,7 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // === NUEVO: Para productos ===
+  // === Para productos ===
   const fetchProductComments = async (productId: number): Promise<Comment[]> => {
     setLoading(true);
     setError(null);
@@ -135,6 +140,58 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // === NUEVO: Para posts ===
+  const fetchPostComments = async (postId: number): Promise<Comment[]> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureToken();
+      const res = await api.get(`/posts/${postId}/comments`);
+      const data = res.data.data ?? res.data;
+      setComments(data);
+      return data;
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error al cargar comentarios');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createPostComment = async (postId: number, content: string): Promise<Comment> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureToken();
+      const res = await api.post(`/posts/${postId}/comments`, {
+        content: content,
+      });
+      const newComment = res.data.comment ?? res.data.data ?? res.data;
+      setComments((prev) => [newComment, ...prev]);
+      return newComment;
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al comentar");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePostComment = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureToken();
+      await api.delete(`/post-comments/${id}`);
+      setComments((prev) => prev.filter((c) => c.id !== id));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'No autorizado o error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <CommentContext.Provider
       value={{
@@ -147,6 +204,9 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
         fetchProductComments,
         createProductComment,
         deleteProductComment,
+        fetchPostComments,
+        createPostComment,
+        deletePostComment,
       }}
     >
       {children}

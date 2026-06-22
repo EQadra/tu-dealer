@@ -1,94 +1,457 @@
-import { useRouter } from 'expo-router';
-import React from 'react';
+// screens/HistoryScreen.tsx
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from 'react-native';
-const historialData = [
-  {
-    id: 1,
-    fecha: '15 Feb 2025',
-    titulo: 'Dr. Luis Medina',
-    descripcion: 'Consulta medicina online + receta digital',
-    monto: '120',
-  },
-  {
-    id: 2,
-    fecha: '02 Feb 2025',
-    titulo: 'LegalGreen Abogados',
-    descripcion: 'Asesoría legal sobre cultivo personal',
-    monto: '250',
-  },
-  {
-    id: 3,
-    fecha: '22 Ene 2025',
-    titulo: 'Asociación Raíces Libres',
-    descripcion: 'Inscripción Taller de Cultivo Básico',
-    monto: '40',
-  },
-  {
-    id: 4,
-    fecha: '10 Ene 2025',
-    titulo: 'NaturalMed farmacia',
-    descripcion: 'Cápsulas de CBD - 30 unidades',
-    monto: '110',
-  },
-];
+import { useDarkMode } from "../../../../context/app/DarkModeContext";
+import { useHistory } from "../../../../context/HistoryContext";
+
+type FilterType = 'all' | 'product' | 'news' | 'post' | 'doctor' | 'lawyer' | 'shop' | 'association';
 
 export default function HistorialScreen() {
-    const router = useRouter();
+  const router = useRouter();
+  const { darkMode } = useDarkMode();
+  const { history, loading, fetchMyHistory, fetchHistoryByType, clearHistory } = useHistory();
   
+  const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('all');
+
+  const colors = {
+    background: darkMode ? "#020617" : "#f5f5f5",
+    card: darkMode ? "#1E293B" : "#E8F5E9",
+    text: darkMode ? "#F8FAFC" : "#1B5E20",
+    secondaryText: darkMode ? "#94A3B8" : "#666666",
+    primary: darkMode ? "#4ADE80" : "#4CAF50",
+    headerBackground: darkMode ? "#0F172A" : "#ffffff",
+    border: darkMode ? "#334155" : "#eeeeee",
+    red: "#EF4444",
+    shadow: darkMode ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.1)",
+  };
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      if (filter === 'all') {
+        await fetchMyHistory();
+      } else {
+        await fetchHistoryByType(filter);
+      }
+    } catch (error) {
+      console.error('Error loading history:', error);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadHistory();
+    setRefreshing(false);
+  };
+
+  const handleFilterChange = (newFilter: FilterType) => {
+    setFilter(newFilter);
+    setTimeout(() => {
+      loadHistory();
+    }, 100);
+  };
+
+  const handleClearHistory = () => {
+    Alert.alert(
+      "Limpiar historial",
+      "¿Estás seguro de que quieres eliminar todo tu historial?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Limpiar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearHistory();
+              Alert.alert("✅ Historial limpiado", "Tu historial ha sido eliminado correctamente.");
+            } catch (error: any) {
+              Alert.alert("Error", error?.message || "No se pudo limpiar el historial");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const getTypeFromModel = (modelType: string): string => {
+    const map: Record<string, string> = {
+      'App\\Models\\Product': 'product',
+      'App\\Models\\News': 'news',
+      'App\\Models\\Post': 'post',
+      'App\\Models\\Doctor': 'doctor',
+      'App\\Models\\Lawyer': 'lawyer',
+      'App\\Models\\Shop': 'shop',
+      'App\\Models\\Association': 'association',
+    };
+    return map[modelType] || 'product';
+  };
+
+  const getIconForType = (modelType: string): string => {
+    const map: Record<string, string> = {
+      'App\\Models\\Product': '🛍️',
+      'App\\Models\\News': '📰',
+      'App\\Models\\Post': '📝',
+      'App\\Models\\Doctor': '👨‍⚕️',
+      'App\\Models\\Lawyer': '⚖️',
+      'App\\Models\\Shop': '🏪',
+      'App\\Models\\Association': '🤝',
+    };
+    return map[modelType] || '📌';
+  };
+
+  const getLabelForType = (modelType: string): string => {
+    const map: Record<string, string> = {
+      'App\\Models\\Product': 'Producto',
+      'App\\Models\\News': 'Noticia',
+      'App\\Models\\Post': 'Post',
+      'App\\Models\\Doctor': 'Doctor',
+      'App\\Models\\Lawyer': 'Abogado',
+      'App\\Models\\Shop': 'Tienda',
+      'App\\Models\\Association': 'Asociación',
+    };
+    return map[modelType] || 'Item';
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    // 👈 Verificar que item y item.historyable existan
+    if (!item || !item.historyable) {
+      return null;
+    }
+
+    const data = item.historyable;
+    const isProduct = item.historyable_type === 'App\\Models\\Product';
+    const isNews = item.historyable_type === 'App\\Models\\News';
+    
+    let title = '';
+    let description = '';
+    let imageUrl = null;
+    let price = null;
+    let extraInfo = '';
+
+    if (isProduct) {
+      title = data.name || 'Producto';
+      description = data.description || 'Sin descripción';
+      imageUrl = data.image;
+      price = data.price;
+      extraInfo = `Stock: ${data.stock || 0}`;
+    } else if (isNews) {
+      title = data.titulo || 'Noticia';
+      description = data.descripcion || 'Sin descripción';
+      imageUrl = data.url;
+      price = null;
+    } else if (item.historyable_type === 'App\\Models\\Doctor') {
+      title = `Dr. ${data.first_name || ''} ${data.last_name || ''}`;
+      description = data.specialty || data.description || 'Médico';
+      imageUrl = data.image;
+    } else if (item.historyable_type === 'App\\Models\\Lawyer') {
+      title = `Abg. ${data.first_name || ''} ${data.last_name || ''}`;
+      description = data.specialty || data.description || 'Abogado';
+      imageUrl = data.image;
+    } else if (item.historyable_type === 'App\\Models\\Shop') {
+      title = data.name || 'Tienda';
+      description = data.description || 'Sin descripción';
+      imageUrl = data.image;
+    } else if (item.historyable_type === 'App\\Models\\Association') {
+      title = data.name || 'Asociación';
+      description = data.description || 'Sin descripción';
+      imageUrl = data.image;
+    } else if (item.historyable_type === 'App\\Models\\Post') {
+      title = data.title || 'Post';
+      description = data.content || 'Sin descripción';
+      imageUrl = data.image;
+    }
+
+    const lastViewed = item.last_viewed_at 
+      ? new Date(item.last_viewed_at).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'Fecha desconocida';
+
+    const icon = getIconForType(item.historyable_type);
+    const label = getLabelForType(item.historyable_type);
+
+    return (
+      <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderLeft}>
+            <View style={[styles.typeBadge, { 
+              backgroundColor: isProduct ? '#22C55E' : isNews ? '#3B82F6' : '#8B5CF6' 
+            }]}>
+              <Text style={styles.typeBadgeText}>
+                {icon} {label}
+              </Text>
+            </View>
+            <View style={styles.viewsContainer}>
+              <Ionicons name="eye-outline" size={14} color={colors.secondaryText} />
+              <Text style={[styles.viewsText, { color: colors.secondaryText }]}>
+                {item.views || 0} vistas
+              </Text>
+            </View>
+          </View>
+          <Text style={[styles.date, { color: colors.secondaryText }]}>{lastViewed}</Text>
+        </View>
+
+        {imageUrl && (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => {}}
+          />
+        )}
+
+        <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
+          {title}
+        </Text>
+
+        <Text style={[styles.description, { color: colors.secondaryText }]} numberOfLines={2}>
+          {description}
+        </Text>
+
+        {isProduct && price !== null && (
+          <Text style={[styles.price, { color: colors.primary }]}>
+            S/ {price}
+          </Text>
+        )}
+
+        {isProduct && extraInfo && (
+          <Text style={[styles.extraInfo, { color: colors.secondaryText }]}>
+            {extraInfo}
+          </Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="time-outline" size={80} color={colors.secondaryText} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+        No hay historial
+      </Text>
+      <Text style={[styles.emptySubtitle, { color: colors.secondaryText }]}>
+        {filter === 'all' 
+          ? 'Los items que visites aparecerán aquí'
+          : `No hay historial de ${filter}`}
+      </Text>
+    </View>
+  );
+
+  // 👈 Verificar si history es undefined
+  const historyData = Array.isArray(history) ? history : [];
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.secondaryText }]}>
+          Cargando historial...
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar 
+        barStyle={darkMode ? "light-content" : "dark-content"} 
+        backgroundColor={colors.background} 
+      />
 
       {/* Header */}
-      <View style={styles.header}>
-             <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#000" />
+      <View style={[styles.header, { 
+        backgroundColor: colors.headerBackground,
+        borderBottomColor: colors.border 
+      }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mi historial</Text>
-        <View style={{ width: 28 }} /> {/* Espacio simétrico */}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Mi historial</Text>
+        {historyData.length > 0 && (
+          <TouchableOpacity style={styles.clearButton} onPress={handleClearHistory}>
+            <Ionicons name="trash-outline" size={22} color={colors.red} />
+          </TouchableOpacity>
+        )}
+        {historyData.length === 0 && <View style={{ width: 28 }} />}
       </View>
 
-      {/* Lista de historial */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {historialData.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.card}>
-            <View style={styles.cardContent}>
-              <Text style={styles.fecha}>{item.fecha}</Text>
-              <Text style={styles.titulo}>{item.titulo}</Text>
-              <Text style={styles.descripcion}>{item.descripcion}</Text>
-            </View>
-            <View style={styles.montoContainer}>
-              <Text style={styles.monto}>S/ {item.monto}</Text>
-              <Ionicons name="chevron-forward" size={24} color="#aaa" />
-            </View>
-          </TouchableOpacity>
-        ))}
+      {/* Filtros */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterContainer}
+        contentContainerStyle={styles.filterContent}
+      >
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'all' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('all')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'all' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            Todos
+          </Text>
+        </TouchableOpacity>
 
-        {/* Espacio para el ícono flotante */}
-        <View style={{ height: 100 }} />
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'product' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('product')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'product' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            🛍️ Productos
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'news' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('news')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'news' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            📰 Noticias
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'post' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('post')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'post' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            📝 Posts
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'doctor' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('doctor')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'doctor' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            👨‍⚕️ Doctores
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'lawyer' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('lawyer')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'lawyer' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            ⚖️ Abogados
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'shop' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('shop')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'shop' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            🏪 Tiendas
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === 'association' && { backgroundColor: colors.primary },
+          ]}
+          onPress={() => handleFilterChange('association')}
+        >
+          <Text style={[
+            styles.filterText,
+            { color: filter === 'association' ? '#FFFFFF' : colors.secondaryText }
+          ]}>
+            🤝 Asociaciones
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Ícono grande flotante (como en la imagen) */}
-     <View style={styles.floatingIcon}>
- <Image
+      {/* Lista de historial */}
+      <FlatList
+        data={historyData}
+        keyExtractor={(item) => `${item.id}-${item.historyable_id}`}
+        renderItem={renderItem}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={renderEmpty}
+      />
+
+      {/* Ícono flotante */}
+      <View style={styles.floatingIcon}>
+        <Image
           source={require("../../../../assets/logo.png")}
           style={{ width: 140, height: 42, resizeMode: "contain" }}
         />
-</View>
-
-      {/* Bottom Navigation Bar */}
-    
+      </View>
     </SafeAreaView>
   );
 }
@@ -96,7 +459,15 @@ export default function HistorialScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
   },
   header: {
     flexDirection: 'row',
@@ -104,62 +475,126 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
   },
-  scrollView: {
-    flex: 1,
+  backButton: {
+    padding: 4,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  filterContainer: {
+    maxHeight: 50,
+    paddingVertical: 8,
+  },
+  filterContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginRight: 8,
+  },
+  filterText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 16,
+    paddingBottom: 120,
   },
   card: {
-    backgroundColor: '#E8F5E9',
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    marginBottom: 8,
   },
-  cardContent: {
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     flex: 1,
   },
-  fecha: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
-    marginBottom: 6,
+  typeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
-  titulo: {
+  typeBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  viewsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  viewsText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  date: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  image: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: '#E5E7EB',
+  },
+  title: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#1B5E20',
     marginBottom: 4,
   },
-  descripcion: {
+  description: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
+    marginBottom: 6,
   },
-  montoContainer: {
-    alignItems: 'flex-end',
-  },
-  monto: {
+  price: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 8,
+  },
+  extraInfo: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 80,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
   floatingIcon: {
     position: 'absolute',
@@ -176,29 +611,4 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 10,
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  navItem: {
-    padding: 8,
-  },
-  navItemActive: {
-    padding: 8,
-  },
-  logo: {
-  width: 50,
-  height: 50,
-  borderRadius: 5,
-  padding: 2,
-},
 });
