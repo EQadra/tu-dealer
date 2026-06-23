@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
 import {
-  Image,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -201,17 +200,7 @@ export default function AparienciaScreen() {
 
       {/* ================= FOOTER ================= */}
 
-      <View
-        style={[
-          styles.footerIcon,
-          { backgroundColor: colors.card },
-        ]}
-      >
-        <Image
-          source={require("../../../../assets/logo.png")}
-          style={{ width: 140, height: 42, resizeMode: "contain" }}
-        />
-      </View>
+      
     </SafeAreaView>
   );
 }

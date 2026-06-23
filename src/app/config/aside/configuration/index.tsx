@@ -2,13 +2,12 @@ import Icon from "@expo/vector-icons/Ionicons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../../../context/AuthContext";
@@ -66,13 +65,7 @@ export default function ConfiguracionScreen() {
         <Text style={styles.dangerText}>Cerrar sesión</Text>
       </TouchableOpacity>
 
-      {/* LOGO */}
-      <View style={styles.footerIcon}>
-        <Image
-          source={require("../../../../assets/logo.png")}
-          style={{ width: 140, height: 42, resizeMode: "contain" }}
-        />
-      </View>
+      
 
 {/* ================= PERFIL MODAL ================= */} <Modal visible={showProfile} animationType="slide"> <SafeAreaView style={styles.modalContainer}>
 

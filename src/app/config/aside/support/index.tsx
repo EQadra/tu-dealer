@@ -1,10 +1,9 @@
 import React from 'react';
 import {
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -72,13 +71,7 @@ export default function SoporteScreen() {
         </View>
       </TouchableOpacity>
 
-      {/* FOOTER LOGO */}
-      <View style={styles.footerIcon}>
-        <Image
-          source={require("../../../../assets/logo.png")}
-          style={{ width: 140, height: 42, resizeMode: "contain" }}
-        />
-      </View>
+     
     </SafeAreaView>
   );
 }

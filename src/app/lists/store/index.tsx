@@ -1,11 +1,8 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import ProductList from "../../components/ProductList";
-// import LatestAssociations from "../../components/LatestAssociations";
-// import LatestDoctors from "../../components/LatestDoctor";
-// import LatestLawyer from "../../components/LatestLawyer";
 import LatestNews from "../../components/LatestNews";
 import LatestShops from "../../components/LatestShops";
+import ProductList from "../../components/ProductList";
 
 const StoreListScreen = () => {
 
@@ -19,7 +16,7 @@ const StoreListScreen = () => {
       component: <ProductList />,
     },
     {
-      id: "LatesNews",
+      id: "latestNews",
       component: <LatestNews />,
     },
   ];

@@ -1,4 +1,4 @@
-// context/CommentContext.tsx - VERSIÓN COMPLETA CON POSTS
+// context/CommentContext.tsx - VERSIÓN COMPLETA CON SERVICIOS
 import * as SecureStore from 'expo-secure-store';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import { Comment } from '../types/comment';
@@ -20,10 +20,15 @@ interface CommentContextProps {
   createProductComment: (productId: number, content: string) => Promise<Comment>;
   deleteProductComment: (id: number) => Promise<void>;
 
-  // NUEVO: Para posts
+  // Para posts
   fetchPostComments: (postId: number) => Promise<Comment[]>;
   createPostComment: (postId: number, content: string) => Promise<Comment>;
   deletePostComment: (id: number) => Promise<void>;
+
+  // 🔥 Para servicios
+  fetchServiceComments: (serviceId: number) => Promise<Comment[]>;
+  createServiceComment: (serviceId: number, content: string) => Promise<Comment>;
+  deleteServiceComment: (id: number) => Promise<void>;
 }
 
 const CommentContext = createContext<CommentContextProps>(
@@ -40,7 +45,7 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
     await setAuthToken(token);
   };
 
-  // === EXISTENTE: Para noticias ===
+  // === Para noticias ===
   const fetchComments = async () => {
     setLoading(true);
     setError(null);
@@ -134,13 +139,12 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
       setComments((prev) => prev.filter((c) => c.id !== id));
     } catch (err: any) {
       setError(err.response?.data?.message || 'No autorizado o error');
-      throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // === NUEVO: Para posts ===
+  // === Para posts ===
   const fetchPostComments = async (postId: number): Promise<Comment[]> => {
     setLoading(true);
     setError(null);
@@ -151,6 +155,7 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
       setComments(data);
       return data;
     } catch (err: any) {
+      console.error('Error fetching post comments:', err);
       setError(err.response?.data?.message || 'Error al cargar comentarios');
       throw err;
     } finally {
@@ -170,6 +175,7 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
       setComments((prev) => [newComment, ...prev]);
       return newComment;
     } catch (err: any) {
+      console.error('Error creating post comment:', err);
       setError(err.response?.data?.message || "Error al comentar");
       throw err;
     } finally {
@@ -182,11 +188,65 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       await ensureToken();
-      await api.delete(`/post-comments/${id}`);
+      await api.delete(`/comments/${id}`);
       setComments((prev) => prev.filter((c) => c.id !== id));
     } catch (err: any) {
+      console.error('Error deleting post comment:', err);
       setError(err.response?.data?.message || 'No autorizado o error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔥 Para servicios
+  const fetchServiceComments = async (serviceId: number): Promise<Comment[]> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureToken();
+      const res = await api.get(`/services/${serviceId}/comments`);
+      const data = res.data.data ?? res.data;
+      setComments(data);
+      return data;
+    } catch (err: any) {
+      console.error('Error fetching service comments:', err);
+      setError(err.response?.data?.message || 'Error al cargar comentarios del servicio');
       throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createServiceComment = async (serviceId: number, content: string): Promise<Comment> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureToken();
+      const res = await api.post(`/services/${serviceId}/comments`, {
+        content: content,
+      });
+      const newComment = res.data.comment ?? res.data.data ?? res.data;
+      setComments((prev) => [newComment, ...prev]);
+      return newComment;
+    } catch (err: any) {
+      console.error('Error creating service comment:', err);
+      setError(err.response?.data?.message || "Error al comentar en el servicio");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteServiceComment = async (id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await ensureToken();
+      await api.delete(`/service-comments/${id}`);
+      setComments((prev) => prev.filter((c) => c.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting service comment:', err);
+      setError(err.response?.data?.message || 'No autorizado o error');
     } finally {
       setLoading(false);
     }
@@ -207,6 +267,9 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
         fetchPostComments,
         createPostComment,
         deletePostComment,
+        fetchServiceComments,
+        createServiceComment,
+        deleteServiceComment,
       }}
     >
       {children}
@@ -214,4 +277,10 @@ export const CommentProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useComments = () => useContext(CommentContext);
+export const useComments = () => {
+  const context = useContext(CommentContext);
+  if (!context) {
+    throw new Error("useComments must be used within a CommentProvider");
+  }
+  return context;
+};

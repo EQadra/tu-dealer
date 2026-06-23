@@ -145,13 +145,7 @@ export default function AyudaScreen() {
        
 
       )}
-       <View style={styles.footerIcon}>
-         <Image
-                  source={require("../../../../assets/logo.png")}
-                  style={{ width: 140, height: 42, resizeMode: "contain" }}
-                />
-          
-              </View>
+     
     </SafeAreaView>
   );
 }

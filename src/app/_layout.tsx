@@ -24,6 +24,7 @@ import { ShopProvider } from "../context/ShopContext";
 import { CommentProvider } from "../context/CommentContext";
 import { DarkModeProvider, useDarkMode } from "../context/app/DarkModeContext";
 
+import { NotificationsProvider } from "../context/NotificationContext";
 import Header from "./components/Header";
 
 /* =========================
@@ -122,6 +123,7 @@ export default function RootLayout(): JSX.Element {
         <DarkModeProvider>
           <AssociationProvider>
               <NewsRoleProvider>
+    <NotificationsProvider>
 
             <NewsProvider>
             <ImageUploadProvider>
@@ -147,6 +149,8 @@ export default function RootLayout(): JSX.Element {
                         </ImageUploadProvider>
 
             </NewsProvider>
+                </NotificationsProvider>
+
               </NewsRoleProvider>
 
           </AssociationProvider>

@@ -10,27 +10,21 @@ import { Association } from "../types/association";
 import api from "../utils/axios";
 
 interface AssociationContextProps {
-  // Estados existentes
   associations: Association[];
   latestAssociations: Association[];
   association: Association | null;
   loading: boolean;
   error: string | null;
-  
-  // Estados de búsqueda
-  searchResults: Association[]; // SIEMPRE array
+  searchResults: Association[];
   searching: boolean;
 
-  // Métodos existentes
   fetchAssociations: () => Promise<void>;
   fetchLatestAssociations: () => Promise<void>;
-  fetchAssociationById: (id: number) => Promise<void>;
+  fetchAssociationById: (id: number) => Promise<Association | null>;
   createAssociation: (data: any) => Promise<Association>;
   updateAssociation: (id: number, data: any) => Promise<Association>;
   deleteAssociation: (id: number) => Promise<void>;
   fetchMyAssociation: () => Promise<void>;
-  
-  // Métodos de búsqueda
   searchAssociations: (query: string) => Promise<Association[]>;
   clearSearch: () => void;
 }
@@ -40,15 +34,12 @@ const AssociationContext = createContext<AssociationContextProps>(
 );
 
 export const AssociationProvider = ({ children }: { children: ReactNode }) => {
-  // Estados existentes
   const [associations, setAssociations] = useState<Association[]>([]);
   const [latestAssociations, setLatestAssociations] = useState<Association[]>([]);
   const [association, setAssociation] = useState<Association | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Estados de búsqueda - SIEMPRE INICIALIZADOS
-  const [searchResults, setSearchResults] = useState<Association[]>([]); // Array vacío por defecto
+  const [searchResults, setSearchResults] = useState<Association[]>([]);
   const [searching, setSearching] = useState(false);
 
   /* -----------------------------
@@ -60,9 +51,11 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res = await api.get("/associations");
-      setAssociations(res.data);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setAssociations(data);
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al cargar asociaciones");
+      console.error("Error fetchAssociations:", err);
     } finally {
       setLoading(false);
     }
@@ -77,7 +70,8 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res = await api.get("/associations/latest");
-      setLatestAssociations(res.data);
+      const data = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setLatestAssociations(data);
     } catch (err: any) {
       setError(
         err.response?.data?.message || "Error al cargar asociaciones recientes"
@@ -88,17 +82,26 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
   };
 
   /* -----------------------------
-   | GET /associations/{id}
+   | GET /associations/{id} - CORREGIDO
    ----------------------------- */
-  const fetchAssociationById = async (id: number) => {
+  const fetchAssociationById = async (id: number): Promise<Association | null> => {
     setLoading(true);
     setError(null);
 
     try {
+      console.log("🔍 Buscando asociación ID:", id);
       const res = await api.get(`/associations/${id}`);
-      setAssociation(res.data);
+      
+      console.log("✅ Asociación recibida:", res.data);
+      
+      const data = res.data;
+      setAssociation(data);
+      return data;
     } catch (err: any) {
+      console.error("❌ Error fetchAssociationById:", err);
       setError(err.response?.data?.message || "Error al cargar asociación");
+      setAssociation(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -187,12 +190,10 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  /* ================================
-     MÉTODOS DE BÚSQUEDA
-  ================================ */
-
+  /* -----------------------------
+   | SEARCH
+   ----------------------------- */
   const searchAssociations = useCallback(async (query: string): Promise<Association[]> => {
-    // Si la consulta está vacía, limpiar resultados
     if (!query || !query.trim()) {
       setSearchResults([]);
       setSearching(false);
@@ -204,21 +205,17 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res = await api.get(`/associations/search?q=${encodeURIComponent(query.trim())}`);
-      // Asegurarse de que data sea siempre un array
       const data = Array.isArray(res.data) ? res.data : [];
       setSearchResults(data);
       return data;
     } catch (err: any) {
-      // Manejo específico para 404 (sin resultados)
       if (err.response?.status === 404) {
-        console.log(`🔍 No se encontraron asociaciones para: "${query}"`);
         setSearchResults([]);
         return [];
       }
-      
       setError(err.response?.data?.message || "Error al buscar asociaciones");
       setSearchResults([]);
-      return []; // Retornar array vacío en lugar de lanzar error
+      return [];
     } finally {
       setSearching(false);
     }
@@ -229,25 +226,16 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
     setSearching(false);
   }, []);
 
-  /* ================================
-     PROVIDER CON TODOS LOS VALORES
-  ================================ */
-
   return (
     <AssociationContext.Provider
       value={{
-        // Estados existentes
         associations,
         latestAssociations,
         association,
         loading,
         error,
-        
-        // Estados de búsqueda - SIEMPRE DEFINIDOS
-        searchResults, // Siempre es un array
-        searching, // Siempre es boolean
-        
-        // Métodos existentes
+        searchResults,
+        searching,
         fetchAssociations,
         fetchLatestAssociations,
         fetchAssociationById,
@@ -255,8 +243,6 @@ export const AssociationProvider = ({ children }: { children: ReactNode }) => {
         updateAssociation,
         deleteAssociation,
         fetchMyAssociation,
-        
-        // Métodos de búsqueda
         searchAssociations,
         clearSearch,
       }}
