@@ -3,16 +3,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useDarkMode } from "../../context/app/DarkModeContext";
 import { useAssociations } from "../../context/AssociationContext";
@@ -29,7 +29,6 @@ const SearchAssociationModal = ({ visible, onClose }: SearchAssociationModalProp
   
   const [query, setQuery] = useState("");
 
-  // Limpiar búsqueda al cerrar el modal
   useEffect(() => {
     if (!visible) {
       setQuery("");
@@ -37,7 +36,6 @@ const SearchAssociationModal = ({ visible, onClose }: SearchAssociationModalProp
     }
   }, [visible]);
 
-  // Manejar la búsqueda
   const handleSearch = async (text: string) => {
     setQuery(text);
     if (text.length >= 2) {
@@ -47,62 +45,88 @@ const SearchAssociationModal = ({ visible, onClose }: SearchAssociationModalProp
     }
   };
 
-  // Colores según dark mode
+  // Colores (mismos que en LatestAssociations)
   const colors = {
     background: darkMode ? "#121212" : "#FFFFFF",
     card: darkMode ? "#1E1E1E" : "#FFFFFF",
     text: darkMode ? "#FFFFFF" : "#124E2C",
     subText: darkMode ? "#B0B0B0" : "#666",
     muted: darkMode ? "#999" : "#777",
+    badge: darkMode ? "#2A2A2A" : "#FFF8DD",
+    green: "#00B272",
+    shadow: "#000",
     border: darkMode ? "#333" : "#E0E0E0",
     inputBg: darkMode ? "#2A2A2A" : "#F5F5F5",
-    green: "#00B272",
   };
 
-  // Renderizar cada item con map
-  const renderResults = () => {
-    const results = Array.isArray(searchResults) ? searchResults : [];
-    
-    if (results.length === 0) return null;
-
-    return results.map((item) => (
-      <TouchableOpacity
-        key={item.id}
-        style={[
-          styles.resultItem,
-          { 
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
-          }
-        ]}
-        onPress={() => {
-          onClose();
-          router.push(`/detail/association/${item.id}`);
-        }}
-      >
-        <Image
-          source={{ uri: item.image || "https://picsum.photos/400" }}
-          style={styles.avatar}
-        />
-        <View style={styles.resultInfo}>
-          <Text style={[styles.resultName, { color: colors.text }]}>
-            {item.name}
-          </Text>
-          <Text style={[styles.resultSpecialty, { color: colors.subText }]}>
-            🏛️ {item.description?.substring(0, 50) || "Asociación"}
-          </Text>
-          <Text style={[styles.resultCity, { color: colors.muted }]}>
-            📍 {item.city || "Ciudad no especificada"}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-      </TouchableOpacity>
-    ));
+  const handlePress = (id: number) => {
+    onClose(); // Cerrar modal antes de navegar
+    router.push(`/detail/association/${id}`);
   };
 
   const results = Array.isArray(searchResults) ? searchResults : [];
   const hasResults = results.length > 0;
   const isSearching = searching === true;
+
+  // Render de cada resultado con el mismo estilo que LatestAssociations
+  const renderResultItem = (item: any) => (
+    <TouchableOpacity
+      key={item.id.toString()}
+      style={[
+        styles.resultCard,
+        {
+          backgroundColor: colors.card,
+          shadowColor: colors.shadow,
+        },
+      ]}
+      activeOpacity={0.85}
+      onPress={() => handlePress(item.id)}
+    >
+      {/* IMAGE */}
+      <Image
+        source={{
+          uri: item.image || "https://picsum.photos/300",
+        }}
+        style={styles.avatar}
+      />
+
+      {/* INFO */}
+      <View style={styles.info}>
+        <Text
+          style={[styles.name, { color: colors.text }]}
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+
+        <Text
+          style={[styles.description, { color: colors.subText }]}
+          numberOfLines={2}
+        >
+          {item.description || "Asociación"}
+        </Text>
+
+        {/* BOTTOM */}
+        <View style={styles.bottomRow}>
+          {/* CITY */}
+          <View style={styles.cityContainer}>
+            <Ionicons name="location-outline" size={13} color={colors.muted} />
+            <Text style={[styles.city, { color: colors.muted }]} numberOfLines={1}>
+              {item.city || "Ciudad no especificada"}
+            </Text>
+          </View>
+
+          {/* RATING (simulado, puedes usar item.rating si existe) */}
+          <View style={[styles.ratingContainer, { backgroundColor: colors.badge }]}>
+            <Ionicons name="star" size={13} color="#FFD700" />
+            <Text style={[styles.rating, { color: darkMode ? "#FFF" : "#444" }]}>
+              {item.rating || "4.5"}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <Modal
@@ -112,7 +136,7 @@ const SearchAssociationModal = ({ visible, onClose }: SearchAssociationModalProp
       onRequestClose={onClose}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header con botón de cerrar */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -158,7 +182,7 @@ const SearchAssociationModal = ({ visible, onClose }: SearchAssociationModalProp
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
-            {renderResults()}
+            {results.map(renderResultItem)}
           </ScrollView>
         ) : query.length >= 2 ? (
           <View style={styles.centerContent}>
@@ -230,32 +254,62 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 20,
   },
-  resultItem: {
+  /* ===== ESTILOS DE TARJETA (IGUAL QUE LATESTASSOCIATIONS) ===== */
+  resultCard: {
+    width: "100%",
+    borderRadius: 30,
+    padding: 12,
+    marginBottom: 14,
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 3,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    marginRight: 14,
   },
-  resultInfo: {
+  info: {
     flex: 1,
   },
-  resultName: {
-    fontSize: 16,
-    fontWeight: "600",
+  name: {
+    fontSize: 15,
+    fontWeight: "700",
   },
-  resultSpecialty: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  resultCity: {
+  description: {
     fontSize: 12,
-    marginTop: 1,
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  bottomRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cityContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  city: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  rating: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: "700",
   },
   centerContent: {
     flex: 1,

@@ -1,4 +1,4 @@
-// app/favorites/index.tsx (o screens/FavoritesScreen.tsx)
+// app/favorites/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {
@@ -13,14 +13,17 @@ import {
 } from "react-native";
 import { useDarkMode } from "../../../../context/app/DarkModeContext";
 import { useFavorites } from "../../../../context/FavoriteContext";
+import DetailModal from "../../../components/DetailModal";
 
-type FilterType = 'all' | 'products' | 'news' | 'posts' | 'doctors' | 'lawyers' | 'shops' | 'associations';
+type FilterType = 'all' | 'product' | 'news' | 'post' | 'doctor' | 'lawyer' | 'shop' | 'association';
 
 const FavoritesScreen = () => {
   const { darkMode } = useDarkMode();
   const { favorites, loading, fetchMyFavorites, fetchFavoritesByType, toggleFavorite } = useFavorites();
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const colors = {
     background: darkMode ? "#020617" : "#f5f5f5",
@@ -35,7 +38,7 @@ const FavoritesScreen = () => {
 
   useEffect(() => {
     loadFavorites();
-  }, []);
+  }, [filter]);
 
   const loadFavorites = async () => {
     if (filter === 'all') {
@@ -53,9 +56,6 @@ const FavoritesScreen = () => {
 
   const handleFilterChange = (newFilter: FilterType) => {
     setFilter(newFilter);
-    setTimeout(() => {
-      loadFavorites();
-    }, 100);
   };
 
   const handleToggleFavorite = async (item: any) => {
@@ -107,6 +107,17 @@ const FavoritesScreen = () => {
     return map[modelType] || 'Item';
   };
 
+  const openDetailModal = (item: any) => {
+    setSelectedItem(item);
+    setModalVisible(true);
+  };
+
+  const closeDetailModal = () => {
+    setModalVisible(false);
+    setSelectedItem(null);
+  };
+
+  // Renderizar cada tarjeta
   const renderItem = ({ item }: { item: any }) => {
     const data = item.favoritable;
     if (!data) return null;
@@ -114,25 +125,15 @@ const FavoritesScreen = () => {
     const isProduct = item.favoritable_type === 'App\\Models\\Product';
     const isNews = item.favoritable_type === 'App\\Models\\News';
     
-    // Obtener título y descripción según el tipo
-    let title = '';
-    let description = '';
-    let imageUrl = null;
-    let price = null;
-    let extraInfo = '';
-
-    if (isProduct) {
-      title = data.name || 'Producto';
-      description = data.description || 'Sin descripción';
-      imageUrl = data.image;
-      price = data.price;
-      extraInfo = `Stock: ${data.stock || 0}`;
-    } else if (isNews) {
-      title = data.titulo || 'Noticia';
-      description = data.descripcion || 'Sin descripción';
-      imageUrl = data.url;
-      price = null;
+    const title = data.name || data.titulo || data.title || 'Sin título';
+    if (data.first_name) {
+      title = `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.first_name;
     }
+    
+    const description = data.description || data.descripcion || data.content || 'Sin descripción';
+    const imageUrl = data.image || data.url || null;
+    const price = data.price || null;
+    const extraInfo = data.stock !== undefined ? `Stock: ${data.stock}` : '';
 
     const date = new Date(item.created_at).toLocaleDateString('es-ES', {
       day: '2-digit',
@@ -144,7 +145,11 @@ const FavoritesScreen = () => {
     const label = getLabelForType(item.favoritable_type);
 
     return (
-      <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
+        onPress={() => openDetailModal(item)}
+        activeOpacity={0.7}
+      >
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <View style={[styles.typeBadge, { 
@@ -192,7 +197,7 @@ const FavoritesScreen = () => {
             {extraInfo}
           </Text>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -235,16 +240,16 @@ const FavoritesScreen = () => {
 
       {/* Filtros */}
       <View style={styles.filterContainer}>
-        {['all', 'products', 'news', 'posts', 'doctors', 'lawyers', 'shops', 'associations'].map((type) => {
-          const labels: Record<string, string> = {
+        {(['all', 'product', 'news', 'post', 'doctor', 'lawyer', 'shop', 'association'] as FilterType[]).map((type) => {
+          const labels: Record<FilterType, string> = {
             all: 'Todos',
-            products: '🛍️',
+            product: '🛍️',
             news: '📰',
-            posts: '📝',
-            doctors: '👨‍⚕️',
-            lawyers: '⚖️',
-            shops: '🏪',
-            associations: '🤝',
+            post: '📝',
+            doctor: '👨‍⚕️',
+            lawyer: '⚖️',
+            shop: '🏪',
+            association: '🤝',
           };
           return (
             <TouchableOpacity
@@ -253,7 +258,7 @@ const FavoritesScreen = () => {
                 styles.filterButton,
                 filter === type && { backgroundColor: colors.primary },
               ]}
-              onPress={() => handleFilterChange(type as FilterType)}
+              onPress={() => handleFilterChange(type)}
             >
               <Text style={[
                 styles.filterText,
@@ -282,6 +287,15 @@ const FavoritesScreen = () => {
           />
         }
         ListEmptyComponent={renderEmpty}
+      />
+
+      {/* 🔥 MODAL UNIVERSAL DE DETALLE */}
+      <DetailModal
+        visible={modalVisible}
+        item={selectedItem}
+        onClose={closeDetailModal}
+        colors={colors}
+        showViews={false}
       />
     </View>
   );

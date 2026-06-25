@@ -1,4 +1,4 @@
-// SearchLawyerModal.tsx
+// SearchLawyerModal.tsx - Versión con diseño de tarjeta mejorado
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -26,10 +26,8 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
   const router = useRouter();
   const { darkMode } = useDarkMode();
   const { searchLawyers, searchResults, searching, clearSearch } = useLawyers();
-  
   const [query, setQuery] = useState("");
 
-  // Limpiar búsqueda al cerrar el modal
   useEffect(() => {
     if (!visible) {
       setQuery("");
@@ -37,7 +35,6 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
     }
   }, [visible]);
 
-  // Manejar la búsqueda
   const handleSearch = async (text: string) => {
     setQuery(text);
     if (text.length >= 2) {
@@ -47,7 +44,6 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
     }
   };
 
-  // Colores según dark mode
   const colors = {
     background: darkMode ? "#121212" : "#FFFFFF",
     card: darkMode ? "#1E1E1E" : "#FFFFFF",
@@ -57,43 +53,8 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
     border: darkMode ? "#333" : "#E0E0E0",
     inputBg: darkMode ? "#2A2A2A" : "#F5F5F5",
     green: "#00B272",
-  };
-
-  // Renderizar cada item con map
-  const renderResults = () => {
-    return searchResults.map((item) => (
-      <TouchableOpacity
-        key={item.id}
-        style={[
-          styles.resultItem,
-          { 
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
-          }
-        ]}
-        onPress={() => {
-          onClose();
-          router.push(`/detail/lawyer/${item.id}`);
-        }}
-      >
-        <Image
-          source={{ uri: item.image || "https://picsum.photos/400" }}
-          style={styles.avatar}
-        />
-        <View style={styles.resultInfo}>
-          <Text style={[styles.resultName, { color: colors.text }]}>
-            {item.first_name} {item.last_name}
-          </Text>
-          <Text style={[styles.resultSpecialty, { color: colors.subText }]}>
-            ⚖️ {item.specialty || "Abogado"}
-          </Text>
-          <Text style={[styles.resultCity, { color: colors.muted }]}>
-            📍 {item.city || "Ciudad no especificada"}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-      </TouchableOpacity>
-    ));
+    shadow: "#000",
+    badge: darkMode ? "#2A2A2A" : "#FFF8DD",
   };
 
   return (
@@ -104,7 +65,7 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
       onRequestClose={onClose}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header con botón de cerrar */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -115,11 +76,16 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Input de búsqueda */}
-        <View style={[styles.searchContainer, { 
-          backgroundColor: colors.inputBg,
-          borderColor: colors.border,
-        }]}>
+        {/* Input */}
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.inputBg,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Ionicons name="search-outline" size={20} color={colors.muted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -136,7 +102,7 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
           )}
         </View>
 
-        {/* Contenido */}
+        {/* Resultados */}
         {searching ? (
           <View style={styles.centerContent}>
             <ActivityIndicator size="large" color={colors.green} />
@@ -150,7 +116,51 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
-            {renderResults()}
+            {searchResults.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.resultItem,
+                  {
+                    backgroundColor: colors.card,
+                    shadowColor: colors.shadow,
+                  },
+                ]}
+                onPress={() => {
+                  onClose();
+                  router.push(`/detail/lawyer/${item.id}`);
+                }}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={{ uri: item.image || "https://picsum.photos/400" }}
+                  style={styles.avatar}
+                />
+                <View style={styles.resultInfo}>
+                  <Text style={[styles.resultName, { color: colors.text }]} numberOfLines={1}>
+                    {item.first_name} {item.last_name}
+                  </Text>
+                  <Text style={[styles.resultSpecialty, { color: colors.subText }]} numberOfLines={1}>
+                    ⚖️ {item.specialty || "Abogado"}
+                  </Text>
+                  <View style={styles.bottomRow}>
+                    <View style={styles.cityContainer}>
+                      <Ionicons name="location-outline" size={13} color={colors.muted} />
+                      <Text style={[styles.city, { color: colors.muted }]} numberOfLines={1}>
+                        {item.city || "Ciudad no especificada"}
+                      </Text>
+                    </View>
+                    <View style={[styles.feedbackContainer, { backgroundColor: colors.badge }]}>
+                      <Ionicons name="chatbubble-outline" size={13} color={colors.muted} />
+                      <Text style={[styles.feedbackCount, { color: darkMode ? "#FFF" : "#444" }]}>
+                        {item.feedbacks?.length || 0}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         ) : query.length >= 2 ? (
           <View style={styles.centerContent}>
@@ -183,10 +193,7 @@ const SearchLawyerModal = ({ visible, onClose }: SearchLawyerModalProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -194,13 +201,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 8,
   },
-  closeButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  closeButton: { padding: 8 },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -210,66 +212,44 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 16,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 8,
-    padding: 0,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
+  searchInput: { flex: 1, fontSize: 16, marginLeft: 8, padding: 0 },
+  scrollView: { flex: 1 },
+  listContent: { paddingBottom: 20 },
   resultItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    padding: 12,
+    borderRadius: 30,
+    marginBottom: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
   },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-  },
-  resultInfo: {
-    flex: 1,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  resultSpecialty: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  resultCity: {
-    fontSize: 12,
-    marginTop: 1,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
+  avatar: { width: 60, height: 60, borderRadius: 30, marginRight: 12 },
+  resultInfo: { flex: 1 },
+  resultName: { fontSize: 16, fontWeight: "700" },
+  resultSpecialty: { fontSize: 13, marginTop: 2 },
+  bottomRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 32,
+    marginTop: 6,
   },
-  noResultsTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 16,
+  cityContainer: { flexDirection: "row", alignItems: "center" },
+  city: { fontSize: 12, marginLeft: 4 },
+  feedbackContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
-  noResultsSub: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-  },
-  messageText: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 12,
-  },
+  feedbackCount: { marginLeft: 4, fontSize: 12, fontWeight: "700" },
+  centerContent: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 },
+  noResultsTitle: { fontSize: 18, fontWeight: "600", marginTop: 16 },
+  noResultsSub: { fontSize: 14, textAlign: "center", marginTop: 8 },
+  messageText: { fontSize: 16, textAlign: "center", marginTop: 12 },
 });
 
 export default SearchLawyerModal;

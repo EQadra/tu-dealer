@@ -1,20 +1,20 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  View,
-  TextInput,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
+  Alert,
   Image,
   KeyboardAvoidingView,
-  Platform,
   Modal,
+  Platform,
   ScrollView,
-  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { useAuth } from "../../../context/AuthContext";
-import { Ionicons } from "@expo/vector-icons";
 
 const roles = [
   { label: "Usuario", value: "usuario", icon: require("../../../../assets/7.png") },
@@ -93,21 +93,23 @@ const SignupScreen = () => {
           payload.dni = data.dni;
           break;
 
-        case "abogado":
-          payload.licencia = data.licencia;
-          break;
-
-        case "doctor":
+        case "abogado": {
           const nameParts = data.name.trim().split(" ");
-
           payload.first_name = nameParts[0] || "";
           payload.last_name = nameParts.slice(1).join(" ") || "---";
+          payload.licencia = data.licencia;
+          break;
+        }
 
+        case "doctor": {
+          const nameParts = data.name.trim().split(" ");
+          payload.first_name = nameParts[0] || "";
+          payload.last_name = nameParts.slice(1).join(" ") || "---";
           payload.degree = "Médico";
           payload.specialty = "General";
-
           payload.codigoDoctor = data.codigoDoctor;
           break;
+        }
 
         case "asociacion":
           payload.ruc = data.ruc;

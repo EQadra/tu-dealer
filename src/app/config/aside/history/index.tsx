@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useDarkMode } from "../../../../context/app/DarkModeContext";
 import { useHistory } from "../../../../context/HistoryContext";
+import DetailModal from "../../../components/DetailModal";
 
 type FilterType = 'all' | 'product' | 'news' | 'post' | 'doctor' | 'lawyer' | 'shop' | 'association';
 
@@ -29,6 +30,8 @@ export default function HistorialScreen() {
   
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const colors = {
     background: darkMode ? "#020617" : "#f5f5f5",
@@ -44,7 +47,7 @@ export default function HistorialScreen() {
 
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [filter]);
 
   const loadHistory = async () => {
     try {
@@ -66,9 +69,6 @@ export default function HistorialScreen() {
 
   const handleFilterChange = (newFilter: FilterType) => {
     setFilter(newFilter);
-    setTimeout(() => {
-      loadHistory();
-    }, 100);
   };
 
   const handleClearHistory = () => {
@@ -91,19 +91,6 @@ export default function HistorialScreen() {
         }
       ]
     );
-  };
-
-  const getTypeFromModel = (modelType: string): string => {
-    const map: Record<string, string> = {
-      'App\\Models\\Product': 'product',
-      'App\\Models\\News': 'news',
-      'App\\Models\\Post': 'post',
-      'App\\Models\\Doctor': 'doctor',
-      'App\\Models\\Lawyer': 'lawyer',
-      'App\\Models\\Shop': 'shop',
-      'App\\Models\\Association': 'association',
-    };
-    return map[modelType] || 'product';
   };
 
   const getIconForType = (modelType: string): string => {
@@ -132,8 +119,18 @@ export default function HistorialScreen() {
     return map[modelType] || 'Item';
   };
 
+  const openDetailModal = (item: any) => {
+    setSelectedItem(item);
+    setModalVisible(true);
+  };
+
+  const closeDetailModal = () => {
+    setModalVisible(false);
+    setSelectedItem(null);
+  };
+
+  // Renderizar cada tarjeta
   const renderItem = ({ item }: { item: any }) => {
-    // 👈 Verificar que item y item.historyable existan
     if (!item || !item.historyable) {
       return null;
     }
@@ -142,44 +139,15 @@ export default function HistorialScreen() {
     const isProduct = item.historyable_type === 'App\\Models\\Product';
     const isNews = item.historyable_type === 'App\\Models\\News';
     
-    let title = '';
-    let description = '';
-    let imageUrl = null;
-    let price = null;
-    let extraInfo = '';
-
-    if (isProduct) {
-      title = data.name || 'Producto';
-      description = data.description || 'Sin descripción';
-      imageUrl = data.image;
-      price = data.price;
-      extraInfo = `Stock: ${data.stock || 0}`;
-    } else if (isNews) {
-      title = data.titulo || 'Noticia';
-      description = data.descripcion || 'Sin descripción';
-      imageUrl = data.url;
-      price = null;
-    } else if (item.historyable_type === 'App\\Models\\Doctor') {
-      title = `Dr. ${data.first_name || ''} ${data.last_name || ''}`;
-      description = data.specialty || data.description || 'Médico';
-      imageUrl = data.image;
-    } else if (item.historyable_type === 'App\\Models\\Lawyer') {
-      title = `Abg. ${data.first_name || ''} ${data.last_name || ''}`;
-      description = data.specialty || data.description || 'Abogado';
-      imageUrl = data.image;
-    } else if (item.historyable_type === 'App\\Models\\Shop') {
-      title = data.name || 'Tienda';
-      description = data.description || 'Sin descripción';
-      imageUrl = data.image;
-    } else if (item.historyable_type === 'App\\Models\\Association') {
-      title = data.name || 'Asociación';
-      description = data.description || 'Sin descripción';
-      imageUrl = data.image;
-    } else if (item.historyable_type === 'App\\Models\\Post') {
-      title = data.title || 'Post';
-      description = data.content || 'Sin descripción';
-      imageUrl = data.image;
+    const title = data.name || data.titulo || data.title || 'Sin título';
+    if (data.first_name) {
+      title = `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.first_name;
     }
+    
+    const description = data.description || data.descripcion || data.content || 'Sin descripción';
+    const imageUrl = data.image || data.url || null;
+    const price = data.price || null;
+    const extraInfo = data.stock !== undefined ? `Stock: ${data.stock}` : '';
 
     const lastViewed = item.last_viewed_at 
       ? new Date(item.last_viewed_at).toLocaleDateString('es-ES', {
@@ -195,7 +163,11 @@ export default function HistorialScreen() {
     const label = getLabelForType(item.historyable_type);
 
     return (
-      <View style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
+        onPress={() => openDetailModal(item)}
+        activeOpacity={0.7}
+      >
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <View style={[styles.typeBadge, { 
@@ -243,7 +215,7 @@ export default function HistorialScreen() {
             {extraInfo}
           </Text>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -261,7 +233,6 @@ export default function HistorialScreen() {
     </View>
   );
 
-  // 👈 Verificar si history es undefined
   const historyData = Array.isArray(history) ? history : [];
 
   if (loading && !refreshing) {
@@ -306,125 +277,35 @@ export default function HistorialScreen() {
         style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
       >
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'all' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('all')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'all' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            Todos
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'product' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('product')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'product' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            🛍️ Productos
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'news' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('news')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'news' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            📰 Noticias
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'post' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('post')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'post' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            📝 Posts
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'doctor' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('doctor')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'doctor' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            👨‍⚕️ Doctores
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'lawyer' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('lawyer')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'lawyer' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            ⚖️ Abogados
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'shop' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('shop')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'shop' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            🏪 Tiendas
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.filterButton,
-            filter === 'association' && { backgroundColor: colors.primary },
-          ]}
-          onPress={() => handleFilterChange('association')}
-        >
-          <Text style={[
-            styles.filterText,
-            { color: filter === 'association' ? '#FFFFFF' : colors.secondaryText }
-          ]}>
-            🤝 Asociaciones
-          </Text>
-        </TouchableOpacity>
+        {(['all', 'product', 'news', 'post', 'doctor', 'lawyer', 'shop', 'association'] as FilterType[]).map((type) => {
+          const labels: Record<FilterType, string> = {
+            all: 'Todos',
+            product: '🛍️ Productos',
+            news: '📰 Noticias',
+            post: '📝 Posts',
+            doctor: '👨‍⚕️ Doctores',
+            lawyer: '⚖️ Abogados',
+            shop: '🏪 Tiendas',
+            association: '🤝 Asociaciones',
+          };
+          return (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.filterButton,
+                filter === type && { backgroundColor: colors.primary },
+              ]}
+              onPress={() => handleFilterChange(type)}
+            >
+              <Text style={[
+                styles.filterText,
+                { color: filter === type ? '#FFFFFF' : colors.secondaryText }
+              ]}>
+                {labels[type]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {/* Lista de historial */}
@@ -445,13 +326,25 @@ export default function HistorialScreen() {
         ListEmptyComponent={renderEmpty}
       />
 
-      {/* Ícono flotante */}
-      <View style={styles.floatingIcon}>
-        <Image
-          source={require("../../../../assets/logo.png")}
-          style={{ width: 140, height: 42, resizeMode: "contain" }}
-        />
-      </View>
+      {/* 🔥 MODAL UNIVERSAL DE DETALLE */}
+      <DetailModal
+        visible={modalVisible}
+        item={selectedItem}
+        onClose={closeDetailModal}
+        colors={colors}
+        showViews={true}
+        views={selectedItem?.views || 0}
+        lastViewed={selectedItem?.last_viewed_at 
+          ? new Date(selectedItem.last_viewed_at).toLocaleString('es-ES', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : 'Fecha desconocida'
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -595,20 +488,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 40,
-  },
-  floatingIcon: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: '#fff',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
   },
 });

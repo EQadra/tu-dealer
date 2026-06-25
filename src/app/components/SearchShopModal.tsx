@@ -3,16 +3,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useDarkMode } from "../../context/app/DarkModeContext";
 import { useShops } from "../../context/ShopContext";
@@ -25,17 +25,9 @@ interface SearchShopModalProps {
 const SearchShopModal = ({ visible, onClose }: SearchShopModalProps) => {
   const router = useRouter();
   const { darkMode } = useDarkMode();
-  const { 
-    searchShops, 
-    searchResults = [], 
-    searching = false, 
-    clearSearch,
-    error 
-  } = useShops();
-  
+  const { searchShops, searchResults = [], searching = false, clearSearch, error } = useShops();
   const [query, setQuery] = useState("");
 
-  // Limpiar búsqueda al cerrar el modal
   useEffect(() => {
     if (!visible) {
       setQuery("");
@@ -43,89 +35,29 @@ const SearchShopModal = ({ visible, onClose }: SearchShopModalProps) => {
     }
   }, [visible]);
 
-  // Manejar la búsqueda
   const handleSearch = async (text: string) => {
     setQuery(text);
     if (text.length >= 2) {
-      console.log("🔍 Buscando tiendas:", text);
       await searchShops(text);
     } else if (text.length === 0) {
       clearSearch();
     }
   };
 
-  // Colores según dark mode
+  // Colores consistentes con los otros modales
   const colors = {
-    background: darkMode ? "#020617" : "#F8FAFC",
-    card: darkMode ? "#0F172A" : "#FFFFFF",
-    text: darkMode ? "#F8FAFC" : "#124E2C",
-    subText: darkMode ? "#94A3B8" : "#64748B",
-    muted: darkMode ? "#94A3B8" : "#94A3B8",
-    border: darkMode ? "#1E293B" : "#E2E8F0",
-    inputBg: darkMode ? "#1E293B" : "#F1F5F9",
-    green: darkMode ? "#4ADE80" : "#00B272",
+    background: darkMode ? "#121212" : "#FFFFFF",
+    card: darkMode ? "#1E1E1E" : "#FFFFFF",
+    text: darkMode ? "#FFFFFF" : "#124E2C",
+    subText: darkMode ? "#B0B0B0" : "#666",
+    muted: darkMode ? "#999" : "#777",
+    border: darkMode ? "#333" : "#E0E0E0",
+    inputBg: darkMode ? "#2A2A2A" : "#F5F5F5",
+    green: "#00B272",
+    shadow: "#000",
+    badge: darkMode ? "#2A2A2A" : "#ECFDF5",
     red: "#FF4444",
-    badge: darkMode ? "#1E293B" : "#ECFDF5",
   };
-
-  // Renderizar cada item
-  const renderResults = () => {
-    const results = Array.isArray(searchResults) ? searchResults : [];
-    
-    if (results.length === 0) return null;
-
-    return results.map((item) => (
-      <TouchableOpacity
-        key={item.id}
-        style={[
-          styles.resultItem,
-          { 
-            backgroundColor: colors.card,
-            borderBottomColor: colors.border,
-          }
-        ]}
-        onPress={() => {
-          onClose();
-          router.push(`/detail/store/${item.id}`);
-        }}
-      >
-        <Image
-          source={{ uri: item.image || "https://picsum.photos/400" }}
-          style={styles.avatar}
-        />
-        <View style={styles.resultInfo}>
-          <Text style={[styles.resultName, { color: colors.text }]}>
-            {item.name}
-          </Text>
-          <Text style={[styles.resultSpecialty, { color: colors.subText }]}>
-            🏪 {item.category || "Tienda"}
-          </Text>
-          <Text style={[styles.resultCity, { color: colors.muted }]}>
-            📍 {item.city || "Ciudad no especificada"}
-          </Text>
-          <View style={styles.resultBadges}>
-            <View style={[styles.resultBadge, { backgroundColor: colors.badge }]}>
-              <Ionicons name="construct-outline" size={12} color={colors.green} />
-              <Text style={[styles.resultBadgeText, { color: colors.green }]}>
-                {item.services?.length || 0} servicios
-              </Text>
-            </View>
-            <View style={[styles.resultBadge, { backgroundColor: colors.badge }]}>
-              <Ionicons name="bag-handle-outline" size={12} color={colors.green} />
-              <Text style={[styles.resultBadgeText, { color: colors.green }]}>
-                {item.products?.length || 0} productos
-              </Text>
-            </View>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.muted} />
-      </TouchableOpacity>
-    ));
-  };
-
-  const results = Array.isArray(searchResults) ? searchResults : [];
-  const hasResults = results.length > 0;
-  const isSearching = searching === true;
 
   return (
     <Modal
@@ -135,22 +67,25 @@ const SearchShopModal = ({ visible, onClose }: SearchShopModalProps) => {
       onRequestClose={onClose}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header con botón de cerrar */}
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Buscar tiendas
-          </Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Buscar tiendas</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {/* Input de búsqueda */}
-        <View style={[styles.searchContainer, { 
-          backgroundColor: colors.inputBg,
-          borderColor: colors.border,
-        }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.inputBg,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Ionicons name="search-outline" size={20} color={colors.muted} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -167,31 +102,85 @@ const SearchShopModal = ({ visible, onClose }: SearchShopModalProps) => {
           )}
         </View>
 
-        {/* Mostrar error si existe */}
+        {/* Error */}
         {error && (
-          <View style={styles.errorContainer}>
+          <View style={[styles.errorContainer, { backgroundColor: darkMode ? "#2A1A1A" : "#FFE5E5" }]}>
             <Ionicons name="alert-circle" size={20} color={colors.red} />
-            <Text style={[styles.errorText, { color: colors.red }]}>
-              {error}
-            </Text>
+            <Text style={[styles.errorText, { color: colors.red }]}>{error}</Text>
           </View>
         )}
 
         {/* Contenido */}
-        {isSearching ? (
+        {searching ? (
           <View style={styles.centerContent}>
             <ActivityIndicator size="large" color={colors.green} />
-            <Text style={[styles.messageText, { color: colors.muted }]}>
-              Buscando tiendas...
-            </Text>
+            <Text style={[styles.messageText, { color: colors.muted }]}>Buscando tiendas...</Text>
           </View>
-        ) : hasResults ? (
+        ) : searchResults.length > 0 ? (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           >
-            {renderResults()}
+            {searchResults.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.resultItem,
+                  {
+                    backgroundColor: colors.card,
+                    shadowColor: colors.shadow,
+                  },
+                ]}
+                onPress={() => {
+                  onClose();
+                  router.push(`/detail/store/${item.id}`);
+                }}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={{ uri: item.image || "https://picsum.photos/400" }}
+                  style={styles.avatar}
+                />
+                <View style={styles.resultInfo}>
+                  <Text style={[styles.resultName, { color: colors.text }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.resultSpecialty, { color: colors.subText }]} numberOfLines={1}>
+                    🏪 {item.category || "Tienda"}
+                  </Text>
+                  <View style={styles.bottomRow}>
+                    <View style={styles.cityContainer}>
+                      <Ionicons name="location-outline" size={13} color={colors.muted} />
+                      <Text style={[styles.city, { color: colors.muted }]} numberOfLines={1}>
+                        {item.city || "Ciudad no especificada"}
+                      </Text>
+                    </View>
+                    <View style={[styles.feedbackContainer, { backgroundColor: colors.badge }]}>
+                      <Ionicons name="star" size={13} color="#FFD700" />
+                      <Text style={[styles.feedbackCount, { color: darkMode ? "#FFF" : "#444" }]}>
+                        {item.rating || 0}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.badgesRow}>
+                    <View style={[styles.badge, { backgroundColor: colors.badge }]}>
+                      <Ionicons name="construct-outline" size={12} color={colors.green} />
+                      <Text style={[styles.badgeText, { color: colors.subText }]}>
+                        {item.services?.length || 0} servicios
+                      </Text>
+                    </View>
+                    <View style={[styles.badge, { backgroundColor: colors.badge }]}>
+                      <Ionicons name="bag-handle-outline" size={12} color={colors.green} />
+                      <Text style={[styles.badgeText, { color: colors.subText }]}>
+                        {item.products?.length || 0} productos
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         ) : query.length >= 2 ? (
           <View style={styles.centerContent}>
@@ -202,21 +191,17 @@ const SearchShopModal = ({ visible, onClose }: SearchShopModalProps) => {
             <Text style={[styles.noResultsSub, { color: colors.muted }]}>
               No hay tiendas que coincidan con "{query}"
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.tryAgainButton, { borderColor: colors.green }]}
               onPress={() => handleSearch(query)}
             >
-              <Text style={[styles.tryAgainText, { color: colors.green }]}>
-                Intentar de nuevo
-              </Text>
+              <Text style={[styles.tryAgainText, { color: colors.green }]}>Intentar de nuevo</Text>
             </TouchableOpacity>
           </View>
         ) : query.length > 0 ? (
           <View style={styles.centerContent}>
             <Ionicons name="text-outline" size={64} color={colors.muted} />
-            <Text style={[styles.messageText, { color: colors.muted }]}>
-              Escribe al menos 2 caracteres
-            </Text>
+            <Text style={[styles.messageText, { color: colors.muted }]}>Escribe al menos 2 caracteres</Text>
           </View>
         ) : (
           <View style={styles.centerContent}>
@@ -232,10 +217,7 @@ const SearchShopModal = ({ visible, onClose }: SearchShopModalProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
+  container: { flex: 1, paddingHorizontal: 16 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -243,13 +225,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 8,
   },
-  closeButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
+  closeButton: { padding: 8 },
+  headerTitle: { fontSize: 18, fontWeight: "700" },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -259,96 +236,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 16,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 8,
-    padding: 0,
-  },
+  searchInput: { flex: 1, fontSize: 16, marginLeft: 8, padding: 0 },
   errorContainer: {
     flexDirection: "row",
     alignItems: "center",
     padding: 10,
     marginBottom: 10,
-    backgroundColor: "#FFE5E5",
     borderRadius: 8,
   },
-  errorText: {
-    fontSize: 14,
-    marginLeft: 8,
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
+  errorText: { fontSize: 14, marginLeft: 8, flex: 1 },
+  scrollView: { flex: 1 },
+  listContent: { paddingBottom: 20 },
   resultItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    padding: 12,
+    borderRadius: 30,
+    marginBottom: 12,
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
   },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-  },
-  resultInfo: {
-    flex: 1,
-  },
-  resultName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  resultSpecialty: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  resultCity: {
-    fontSize: 12,
-    marginTop: 1,
-  },
-  resultBadges: {
+  avatar: { width: 60, height: 60, borderRadius: 30, marginRight: 12 },
+  resultInfo: { flex: 1 },
+  resultName: { fontSize: 16, fontWeight: "700" },
+  resultSpecialty: { fontSize: 13, marginTop: 2 },
+  bottomRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginTop: 6,
-    gap: 8,
   },
-  resultBadge: {
+  cityContainer: { flexDirection: "row", alignItems: "center" },
+  city: { fontSize: 12, marginLeft: 4 },
+  feedbackContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  resultBadgeText: {
-    fontSize: 10,
-    fontWeight: "600",
-    marginLeft: 4,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: "center",
+  feedbackCount: { marginLeft: 4, fontSize: 12, fontWeight: "700" },
+  badgesRow: { flexDirection: "row", marginTop: 6, gap: 8 },
+  badge: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  noResultsTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 16,
-  },
-  noResultsSub: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 8,
-  },
-  messageText: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 12,
-  },
+  badgeText: { fontSize: 10, fontWeight: "600", marginLeft: 4 },
+  centerContent: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 },
+  noResultsTitle: { fontSize: 18, fontWeight: "600", marginTop: 16 },
+  noResultsSub: { fontSize: 14, textAlign: "center", marginTop: 8 },
+  messageText: { fontSize: 16, textAlign: "center", marginTop: 12 },
   tryAgainButton: {
     marginTop: 16,
     paddingVertical: 10,
@@ -356,10 +298,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  tryAgainText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  tryAgainText: { fontSize: 14, fontWeight: "600" },
 });
 
 export default SearchShopModal;

@@ -6,6 +6,7 @@ import {
   Dimensions,
   Image,
   Pressable,
+  ScrollView, // <-- Importado
   Text,
   TouchableOpacity,
   View,
@@ -22,7 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 /* =========================
-   MENU DATA
+   MENU DATA (sin cambios)
 ========================= */
 
 const sections = [
@@ -127,7 +128,7 @@ const sections = [
 
 export default function Header() {
   const { darkMode } = useDarkMode();
-  const { user, updateUserProfile } = useAuth(); // ✅ Obtener updateUserProfile
+  const { user, updateUserProfile } = useAuth();
   const { pickImage, uploadImageByRole } = useImageUpload();
 
   const { top } = useSafeAreaInsets();
@@ -157,14 +158,10 @@ export default function Header() {
     return null;
   };
 
-  // ✅ Actualizar imagen cuando cambia el usuario
   useEffect(() => {
     setProfileImage(getProfileImage());
   }, [user]);
 
-  /* =========================
-     ROLE
-  ========================= */
   const role = user?.profileType;
 
   /* =========================
@@ -172,14 +169,10 @@ export default function Header() {
   ========================= */
   const getFilteredSections = () => {
     return sections.map((section) => {
-      /* =========================
-         GENERAL
-      ========================= */
       if (section.title === "General") {
         return {
           ...section,
           items: section.items.filter((item) => {
-            // Solo doctor y lawyer pueden ver Servicios
             if (item.title === "Servicios") {
               return role === "doctor" || role === "lawyer";
             }
@@ -188,9 +181,6 @@ export default function Header() {
         };
       }
 
-      /* =========================
-         PERFIL
-      ========================= */
       if (section.title === "Perfil") {
         return {
           ...section,
@@ -210,12 +200,11 @@ export default function Header() {
   };
 
   /* =========================
-     CAMBIAR IMAGEN - ✅ CON UPDATEUSERPROFILE
+     CAMBIAR IMAGEN
   ========================= */
   const changeImage = async () => {
     try {
       const image = await pickImage();
-
       if (!image) return;
 
       const roleMap = {
@@ -226,7 +215,6 @@ export default function Header() {
       } as const;
 
       const role = roleMap[user?.profileType as keyof typeof roleMap];
-
       if (!role) {
         Alert.alert("Error", "Este perfil no permite cambiar imagen");
         return;
@@ -237,15 +225,10 @@ export default function Header() {
         image,
       });
 
-      console.log("📸 RESPUESTA UPLOAD:", JSON.stringify(res, null, 2));
-
       if (res?.image) {
         const newImageUrl = `${res.image}?t=${Date.now()}`;
-
-        // ✅ Actualizar imagen localmente
         setProfileImage(newImageUrl);
 
-        // ✅ ACTUALIZAR EL USUARIO EN EL CONTEXTO GLOBAL
         if (user?.profile) {
           await updateUserProfile({
             profile: {
@@ -334,8 +317,15 @@ export default function Header() {
           <Ionicons name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
         </TouchableOpacity>
 
-        {/* LOGO */}
-        <View style={{ flex: 1, alignItems: "center" }}>
+        {/* LOGO - AHORA ES CLICABLE */}
+        <TouchableOpacity
+          style={{ flex: 1, alignItems: "center" }}
+          onPress={() => {
+            router.push("/aplication/home-app");
+            closeMenu(); // Cerrar menú si está abierto
+          }}
+          activeOpacity={0.7}
+        >
           <Image
             source={require("../../assets/logo.png")}
             resizeMode="contain"
@@ -344,7 +334,7 @@ export default function Header() {
               height: 42,
             }}
           />
-        </View>
+        </TouchableOpacity>
 
         {/* NOTIFICATIONS */}
         <TouchableOpacity
@@ -355,7 +345,6 @@ export default function Header() {
         >
           <Ionicons name="notifications-outline" size={26} color="#fff" />
 
-          {/* BADGE */}
           <View
             style={{
               position: "absolute",
@@ -383,7 +372,7 @@ export default function Header() {
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR CON SCROLL */}
       <Animated.View
         style={{
           transform: [{ translateX: slideAnim }],
@@ -391,13 +380,14 @@ export default function Header() {
           top: top + 60,
           left: 0,
           width: 280,
-          height: SCREEN_HEIGHT,
+          height: SCREEN_HEIGHT - top - 60,
           backgroundColor: colors.bg,
           borderTopRightRadius: 40,
           borderBottomRightRadius: 40,
+          overflow: "hidden", // Para respetar el borde redondeado con el scroll
         }}
       >
-        {/* PROFILE */}
+        {/* Perfil - fijo */}
         <View
           style={{
             padding: 20,
@@ -446,8 +436,11 @@ export default function Header() {
           <Text style={{ color: colors.subText }}>{user?.email}</Text>
         </View>
 
-        {/* MENU ITEMS */}
-        <View style={{ padding: 12 }}>
+        {/* MENÚ ITEMS - CON SCROLL */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ padding: 12, paddingBottom: 30 }}
+        >
           {getFilteredSections().map((section) => {
             const isOpen = expanded[section.title];
 
@@ -523,7 +516,7 @@ export default function Header() {
               </View>
             );
           })}
-        </View>
+        </ScrollView>
       </Animated.View>
     </View>
   );

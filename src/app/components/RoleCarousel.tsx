@@ -51,7 +51,7 @@ const RoleCarousel = () => {
     },
     {
       id: "3",
-      title: "Asociaciones",
+      title: "Asociaciones y Farmacias",
       image: require("../../assets/home/asociation.png"),
       route: "lists/association",
       icon: "people-outline",
