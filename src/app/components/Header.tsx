@@ -6,12 +6,13 @@ import {
   Dimensions,
   Image,
   Pressable,
-  ScrollView, // <-- Importado
+  ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
+import * as ImagePicker from 'expo-image-picker';
 import { useImageUpload } from "../../context/app/ImageUploadContext";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -23,112 +24,46 @@ import { useAuth } from "../../context/AuthContext";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 /* =========================
-   MENU DATA (sin cambios)
+   MENU DATA (COMPLETO)
 ========================= */
 
 const sections = [
   {
     title: "General",
     items: [
-      {
-        title: "Inicio",
-        route: "/aplication/home-app",
-        icon: "home-outline",
-      },
-      {
-        title: "Noticias",
-        route: "/config/all/new",
-        icon: "newspaper-outline",
-      },
-      {
-        title: "Posts",
-        route: "/config/all/post",
-        icon: "document-text-outline",
-      },
-      {
-        title: "Servicios",
-        route: "/config/all/service",
-        icon: "construct-outline",
-      },
+      { title: "Inicio", route: "/aplication/home-app", icon: "home-outline" },
+      { title: "Noticias", route: "/config/all/new", icon: "newspaper-outline" },
+      { title: "Posts", route: "/config/all/post", icon: "document-text-outline" },
+      { title: "Servicios", route: "/config/all/service", icon: "construct-outline" },
     ],
   },
-
   {
     title: "Perfil",
     items: [
-      {
-        title: "Perfil Asociación",
-        route: "/config/all/association",
-        icon: "business-outline",
-      },
-      {
-        title: "Perfil Doctor",
-        route: "/config/all/doctor",
-        icon: "medkit-outline",
-      },
-      {
-        title: "Perfil Abogado",
-        route: "/config/all/lawyer",
-        icon: "briefcase-outline",
-      },
-      {
-        title: "Perfil Tienda",
-        route: "/config/all/store",
-        icon: "storefront-outline",
-      },
-      {
-        title: "Perfil Usuario",
-        route: "/config/all/user",
-        icon: "person-outline",
-      },
+      { title: "Perfil Asociación", route: "/config/all/association", icon: "business-outline" },
+      { title: "Perfil Doctor", route: "/config/all/doctor", icon: "medkit-outline" },
+      { title: "Perfil Abogado", route: "/config/all/lawyer", icon: "briefcase-outline" },
+      { title: "Perfil Tienda", route: "/config/all/store", icon: "storefront-outline" },
+      { title: "Perfil Usuario", route: "/config/all/user", icon: "person-outline" },
     ],
   },
-
   {
     title: "Configuración",
     items: [
-      {
-        title: "Configuración",
-        route: "/config/aside/configuration",
-        icon: "settings-outline",
-      },
-      {
-        title: "Nosotros",
-        route: "/config/aside/about_us",
-        icon: "information-circle-outline",
-      },
-      {
-        title: "Ayuda",
-        route: "/config/aside/help",
-        icon: "help-circle-outline",
-      },
-      {
-        title: "Favoritos",
-        route: "/config/aside/favorites",
-        icon: "heart-outline",
-      },
-      {
-        title: "Historial",
-        route: "/config/aside/history",
-        icon: "time-outline",
-      },
-      {
-        title: "Soporte",
-        route: "/config/aside/support",
-        icon: "lock-closed-outline",
-      },
-      {
-        title: "Dark Mode",
-        route: "/config/aside/dark_mode",
-        icon: "moon-outline",
-      },
+      { title: "Configuración", route: "/config/aside/configuration", icon: "settings-outline" },
+      { title: "Nosotros", route: "/config/aside/about_us", icon: "information-circle-outline" },
+      { title: "Ayuda", route: "/config/aside/help", icon: "help-circle-outline" },
+      { title: "Favoritos", route: "/config/aside/favorites", icon: "heart-outline" },
+      { title: "Historial", route: "/config/aside/history", icon: "time-outline" },
+      { title: "Soporte", route: "/config/aside/support", icon: "lock-closed-outline" },
+      { title: "Dark Mode", route: "/config/aside/dark_mode", icon: "moon-outline" },
     ],
   },
 ];
 
 export default function Header() {
   const { darkMode } = useDarkMode();
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateAvatar, deleteAvatar } = useAuth();
   const { pickImage, uploadImageByRole } = useImageUpload();
 
   const { top } = useSafeAreaInsets();
@@ -146,14 +81,19 @@ export default function Header() {
      OBTENER IMAGEN DEL PERFIL
   ========================= */
   const getProfileImage = () => {
+    // Priorizar avatar del usuario
+    if (user?.avatar_url) {
+      return user.avatar_url;
+    }
+    if (user?.avatar) {
+      return user.avatar;
+    }
+    // Fallback: imagen del perfil asociado
     if (user?.profile?.image_url) {
       return user.profile.image_url;
     }
     if (user?.profile?.image) {
       return user.profile.image;
-    }
-    if (user?.avatar) {
-      return user.avatar;
     }
     return null;
   };
@@ -200,9 +140,9 @@ export default function Header() {
   };
 
   /* =========================
-     CAMBIAR IMAGEN
+     CAMBIAR IMAGEN (PERFIL ASOCIADO)
   ========================= */
-  const changeImage = async () => {
+  const changeRoleImage = async () => {
     try {
       const image = await pickImage();
       if (!image) return;
@@ -220,29 +160,11 @@ export default function Header() {
         return;
       }
 
-      const res = await uploadImageByRole({
-        role,
-        image,
-      });
+      const res = await uploadImageByRole({ role, image });
 
       if (res?.image) {
         const newImageUrl = `${res.image}?t=${Date.now()}`;
         setProfileImage(newImageUrl);
-
-        if (user?.profile) {
-          await updateUserProfile({
-            profile: {
-              ...user.profile,
-              image: res.image,
-              image_url: newImageUrl,
-            },
-          });
-        } else {
-          await updateUserProfile({
-            avatar: newImageUrl,
-          });
-        }
-
         Alert.alert("Correcto", "Imagen actualizada");
       } else {
         Alert.alert("Error", "No se recibió la nueva imagen");
@@ -250,6 +172,70 @@ export default function Header() {
     } catch (error) {
       console.log("❌ Error al cambiar imagen:", error);
       Alert.alert("Error", "No se pudo actualizar la imagen");
+    }
+  };
+
+  /* =========================
+     CAMBIAR AVATAR (USUARIO)
+  ========================= */
+  const changeImage = async () => {
+    try {
+      Alert.alert(
+        "Foto de perfil",
+        "¿Qué deseas hacer?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Cambiar foto",
+            onPress: async () => {
+              const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (!permissionResult.granted) {
+                Alert.alert("Permiso denegado", "Necesitamos acceso a tu galería");
+                return;
+              }
+
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsEditing: true,
+                quality: 0.8,
+                aspect: [1, 1],
+              });
+
+              if (!result.canceled) {
+                const imageUri = result.assets[0].uri;
+                Alert.alert("Actualizando...", "Por favor espera");
+                const newAvatar = await updateAvatar(imageUri);
+                setProfileImage(newAvatar);
+                Alert.alert("✅ Correcto", "Foto de perfil actualizada");
+              }
+            }
+          },
+          ...(profileImage ? [{
+            text: "Eliminar foto",
+            style: "destructive" as const,
+            onPress: async () => {
+              Alert.alert(
+                "Confirmar",
+                "¿Estás seguro de eliminar tu foto de perfil?",
+                [
+                  { text: "Cancelar", style: "cancel" },
+                  {
+                    text: "Eliminar",
+                    style: "destructive" as const,
+                    onPress: async () => {
+                      await deleteAvatar();
+                      setProfileImage(null);
+                      Alert.alert("✅ Correcto", "Foto eliminada");
+                    }
+                  }
+                ]
+              );
+            }
+          }] : [])
+        ]
+      );
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "No se pudo actualizar la imagen");
     }
   };
 
@@ -317,34 +303,28 @@ export default function Header() {
           <Ionicons name={menuOpen ? "close" : "menu"} size={26} color="#fff" />
         </TouchableOpacity>
 
-        {/* LOGO - AHORA ES CLICABLE */}
+        {/* LOGO */}
         <TouchableOpacity
           style={{ flex: 1, alignItems: "center" }}
           onPress={() => {
             router.push("/aplication/home-app");
-            closeMenu(); // Cerrar menú si está abierto
+            closeMenu();
           }}
           activeOpacity={0.7}
         >
           <Image
             source={require("../../assets/logo.png")}
             resizeMode="contain"
-            style={{
-              width: 140,
-              height: 42,
-            }}
+            style={{ width: 140, height: 42 }}
           />
         </TouchableOpacity>
 
         {/* NOTIFICATIONS */}
         <TouchableOpacity
           onPress={() => router.push("/config/aside/notifications")}
-          style={{
-            position: "relative",
-          }}
+          style={{ position: "relative" }}
         >
           <Ionicons name="notifications-outline" size={26} color="#fff" />
-
           <View
             style={{
               position: "absolute",
@@ -372,7 +352,7 @@ export default function Header() {
         />
       )}
 
-      {/* SIDEBAR CON SCROLL */}
+      {/* SIDEBAR CON SCROLL CORREGIDO */}
       <Animated.View
         style={{
           transform: [{ translateX: slideAnim }],
@@ -384,32 +364,35 @@ export default function Header() {
           backgroundColor: colors.bg,
           borderTopRightRadius: 40,
           borderBottomRightRadius: 40,
-          overflow: "hidden", // Para respetar el borde redondeado con el scroll
+          overflow: "hidden",
         }}
       >
-        {/* Perfil - fijo */}
+        {/* PERFIL */}
         <View
           style={{
             padding: 20,
+            paddingBottom: 16,
             borderBottomWidth: 1,
             borderColor: colors.border,
             alignItems: "center",
             backgroundColor: colors.card,
           }}
         >
-          <Image
-            key={profileImage || "default"}
-            source={{
-              uri: profileImage || "https://i.pravatar.cc/150",
-            }}
-            style={{
-              width: 90,
-              height: 90,
-              borderRadius: 45,
-              borderWidth: 3,
-              borderColor: colors.primary,
-            }}
-          />
+          <TouchableOpacity onPress={changeImage}>
+            <Image
+              key={profileImage || "default"}
+              source={{
+                uri: profileImage || "https://i.pravatar.cc/150?img=1",
+              }}
+              style={{
+                width: 90,
+                height: 90,
+                borderRadius: 45,
+                borderWidth: 3,
+                borderColor: colors.primary,
+              }}
+            />
+          </TouchableOpacity>
 
           <TouchableOpacity onPress={changeImage}>
             <Text
@@ -419,7 +402,7 @@ export default function Header() {
                 fontSize: 12,
               }}
             >
-              Cambiar foto
+              {profileImage ? "Cambiar foto" : "Agregar foto"}
             </Text>
           </TouchableOpacity>
 
@@ -436,10 +419,14 @@ export default function Header() {
           <Text style={{ color: colors.subText }}>{user?.email}</Text>
         </View>
 
-        {/* MENÚ ITEMS - CON SCROLL */}
+        {/* MENÚ ITEMS CON SCROLL */}
         <ScrollView
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: 12, paddingBottom: 30 }}
+          contentContainerStyle={{
+            padding: 12,
+            paddingBottom: 40,
+          }}
         >
           {getFilteredSections().map((section) => {
             const isOpen = expanded[section.title];
@@ -498,9 +485,7 @@ export default function Header() {
                           name={item.icon as any}
                           size={20}
                           color={active ? colors.primary : colors.subText}
-                          style={{
-                            marginRight: 10,
-                          }}
+                          style={{ marginRight: 10 }}
                         />
 
                         <Text
