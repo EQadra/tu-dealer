@@ -6,7 +6,6 @@ import {
   Dimensions,
   Image,
   Pressable,
-  ScrollView,
   Text,
   TouchableOpacity,
   View
@@ -17,6 +16,7 @@ import { useImageUpload } from "../../context/app/ImageUploadContext";
 
 import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
+import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDarkMode } from "../../context/app/DarkModeContext";
 import { useAuth } from "../../context/AuthContext";
@@ -286,7 +286,7 @@ export default function Header() {
   };
 
   return (
-    <View style={{ paddingTop: top, zIndex: 999 }}>
+    <GestureHandlerRootView style={{ flex: 1, paddingTop: top, zIndex: 999 }}>
       {/* HEADER */}
       <View
         style={{
@@ -345,9 +345,12 @@ export default function Header() {
           onPress={closeMenu}
           style={{
             position: "absolute",
-            width: SCREEN_WIDTH,
-            height: SCREEN_HEIGHT,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 999,
           }}
         />
       )}
@@ -360,14 +363,17 @@ export default function Header() {
           top: top + 60,
           left: 0,
           width: 280,
-          height: SCREEN_HEIGHT - top - 60,
+          height: SCREEN_HEIGHT - top - 10 - 10,
           backgroundColor: colors.bg,
           borderTopRightRadius: 40,
           borderBottomRightRadius: 40,
-          overflow: "hidden",
+          zIndex: 1000,
+          elevation: 1000,
+          overflow: 'hidden',
         }}
+        pointerEvents={menuOpen ? "auto" : "none"}
       >
-        {/* PERFIL */}
+        {/* PERFIL - Fijo en la parte superior */}
         <View
           style={{
             padding: 20,
@@ -420,89 +426,133 @@ export default function Header() {
         </View>
 
         {/* MENÚ ITEMS CON SCROLL */}
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            padding: 12,
-            paddingBottom: 40,
-          }}
-        >
-          {getFilteredSections().map((section) => {
-            const isOpen = expanded[section.title];
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={{
+              padding: 12,
+              paddingBottom: 40,
+            }}
+            style={{ flex: 1 }}
+          >
+            {getFilteredSections().map((section) => {
+              const isOpen = expanded[section.title];
 
-            return (
-              <View key={section.title} style={{ marginBottom: 10 }}>
-                {/* SECTION */}
-                <TouchableOpacity
-                  onPress={() =>
-                    setExpanded((prev: any) => ({
-                      ...prev,
-                      [section.title]: !prev[section.title],
-                    }))
-                  }
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    paddingVertical: 6,
-                  }}
-                >
-                  <Text
+              return (
+                <View key={section.title} style={{ marginBottom: 10 }}>
+                  {/* SECTION TITLE */}
+                  <TouchableOpacity
+                    onPress={() =>
+                      setExpanded((prev: any) => ({
+                        ...prev,
+                        [section.title]: !prev[section.title],
+                      }))
+                    }
                     style={{
-                      color: colors.subText,
-                      fontSize: 12,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 6,
                     }}
                   >
-                    {section.title.toUpperCase()}
-                  </Text>
+                    <Text
+                      style={{
+                        color: colors.subText,
+                        fontSize: 12,
+                      }}
+                    >
+                      {section.title.toUpperCase()}
+                    </Text>
 
-                  <Ionicons
-                    name={isOpen ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color={colors.subText}
-                  />
-                </TouchableOpacity>
+                    <Ionicons
+                      name={isOpen ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={colors.subText}
+                    />
+                  </TouchableOpacity>
 
-                {/* ITEMS */}
-                {isOpen &&
-                  section.items.map((item) => {
-                    const active = pathname === item.route;
+                  {/* ITEMS */}
+                  {isOpen &&
+                    section.items.map((item) => {
+                      const active = pathname === item.route;
 
-                    return (
-                      <TouchableOpacity
-                        key={item.title}
-                        onPress={() => navigate(item.route)}
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          padding: 10,
-                          borderRadius: 10,
-                          backgroundColor: active ? colors.activeBg : "transparent",
-                          marginTop: 4,
-                        }}
-                      >
-                        <Ionicons
-                          name={item.icon as any}
-                          size={20}
-                          color={active ? colors.primary : colors.subText}
-                          style={{ marginRight: 10 }}
-                        />
-
-                        <Text
+                      return (
+                        <TouchableOpacity
+                          key={item.title}
+                          onPress={() => navigate(item.route)}
                           style={{
-                            color: active ? colors.primary : colors.text,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            padding: 10,
+                            borderRadius: 10,
+                            backgroundColor: active ? colors.activeBg : "transparent",
+                            marginTop: 4,
                           }}
                         >
-                          {item.title}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                          <Ionicons
+                            name={item.icon as any}
+                            size={20}
+                            color={active ? colors.primary : colors.subText}
+                            style={{ marginRight: 10 }}
+                          />
+
+                          <Text
+                            style={{
+                              color: active ? colors.primary : colors.text,
+                            }}
+                          >
+                            {item.title}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                </View>
+              );
+            })}
+            
+            {/* INDICADOR DE FINAL - Versión Compacta Elegante */}
+            <View style={{ 
+              paddingVertical: 20, 
+              alignItems: 'center',
+              marginTop: 5,
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                <View style={{
+                  width: 25,
+                  height: 1,
+                  backgroundColor: colors.primary,
+                  opacity: 0.2,
+                }} />
+                <Ionicons 
+                  name="chevron-down" 
+                  size={14} 
+                  color={colors.primary} 
+                  style={{ opacity: 0.3 }}
+                />
+                <View style={{
+                  width: 25,
+                  height: 1,
+                  backgroundColor: colors.primary,
+                  opacity: 0.2,
+                }} />
               </View>
-            );
-          })}
-        </ScrollView>
+              <Text style={{ 
+                color: colors.subText, 
+                fontSize: 9,
+                marginTop: 6,
+                opacity: 0.25,
+                letterSpacing: 4,
+                textTransform: 'uppercase',
+              }}>
+                Final
+              </Text>
+            </View>
+          </ScrollView>
+        </View>
       </Animated.View>
-    </View>
+    </GestureHandlerRootView>
   );
 }
