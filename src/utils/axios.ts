@@ -4,7 +4,6 @@ import * as SecureStore from 'expo-secure-store';
 
 export const BASE_URL = 'https://apiapk.tudealer.app/api'
 
-// export const BASE_URL = 'http://192.168.18.71:8000/api'
 let memoryToken: string | null = null;
 
 /* =========================
